@@ -40,6 +40,7 @@ import { LAW_2020_QUESTIONS } from "./law-2020.js";
 import { LAW_2021_QUESTIONS } from "./law-2021.js";
 import { LAW_2022_QUESTIONS } from "./law-2022.js";
 import { LAW_2023_QUESTIONS } from "./law-2023.js";
+import { LAW_2024_QUESTIONS } from "./law-2024.js";
 import { LAW_2026_QUESTIONS } from "./law-2026.js";
 import { SME_2019_QUESTIONS } from "./sme-2019.js";
 import { SME_2020_QUESTIONS } from "./sme-2020.js";
@@ -89,6 +90,7 @@ export const PASTEXAM_QUESTIONS = [
   ...LAW_2021_QUESTIONS,
   ...LAW_2022_QUESTIONS,
   ...LAW_2023_QUESTIONS,
+  ...LAW_2024_QUESTIONS,
   ...LAW_2026_QUESTIONS,
   ...SME_2019_QUESTIONS,
   ...SME_2020_QUESTIONS,
