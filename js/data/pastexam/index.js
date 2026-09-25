@@ -12,6 +12,7 @@ import { SME_2019_QUESTIONS } from "./sme-2019.js";
 import { SME_2020_QUESTIONS } from "./sme-2020.js";
 import { SME_2021_QUESTIONS } from "./sme-2021.js";
 import { SME_2022_QUESTIONS } from "./sme-2022.js";
+import { SME_2023_QUESTIONS } from "./sme-2023.js";
 
 export const PASTEXAM_QUESTIONS = [
   ...IT_2026_QUESTIONS,
@@ -23,5 +24,6 @@ export const PASTEXAM_QUESTIONS = [
   ...SME_2019_QUESTIONS,
   ...SME_2020_QUESTIONS,
   ...SME_2021_QUESTIONS,
-  ...SME_2022_QUESTIONS
+  ...SME_2022_QUESTIONS,
+  ...SME_2023_QUESTIONS
 ];
