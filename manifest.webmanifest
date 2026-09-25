@@ -1,0 +1,17 @@
+{
+  "name": "診断士ジム",
+  "short_name": "診断士ジム",
+  "description": "夫婦で中小企業診断士1次試験対策。スマホの隙間時間で演習できるPWA。",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#EEF0EA",
+  "theme_color": "#29443C",
+  "lang": "ja",
+  "orientation": "portrait-primary",
+  "icons": [
+    { "src": "./icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "./icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "./icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

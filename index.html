@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>診断士ジム</title>
+<meta name="description" content="夫婦で中小企業診断士1次試験対策。スマホの隙間時間で過去問道場スタイルの演習ができるPWA。">
+<meta name="theme-color" content="#29443C" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#16201B" media="(prefers-color-scheme: dark)">
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="icon" href="./icons/icon-192.png">
+<link rel="apple-touch-icon" href="./icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="診断士ジム">
+<link rel="stylesheet" href="./css/style.css">
+</head>
+<body>
+
+<header class="top">
+  <div class="brand">
+    <h1>診断士ジム</h1>
+    <span class="sub">1次試験・演習</span>
+  </div>
+  <div class="userbar" id="userbar"></div>
+</header>
+
+<div class="install-banner" id="installBanner" hidden>
+  <span>ホーム画面に追加してオフラインでも使えます</span>
+  <button id="installBtn" type="button">追加</button>
+  <button class="dismiss" id="installDismiss" type="button">閉じる</button>
+</div>
+
+<section>
+  <span class="eyebrow">夫婦の成績</span>
+  <div class="compare-grid" id="compareGrid"></div>
+  <div class="subject-bars" id="subjectBars"></div>
+  <button class="settings-toggle" id="settingsToggle">名前を編集する</button>
+  <div class="settings-panel" id="settingsPanel" hidden>
+    <label>夫の表示名<input id="nameH" maxlength="10"></label>
+    <label>妻の表示名<input id="nameW" maxlength="10"></label>
+    <button id="saveNames">保存</button>
+
+    <div class="sync-block">
+      <span class="sync-label">端末間で進捗を同期する（サインイン不要）<br>①片方の端末で「コードを作成」→②コードをコピーしてもう片方の端末に伝える（LINE等で送る）→③相手の端末で貼り付けて「取り込む」</span>
+      <div class="sync-row">
+        <button id="syncExport" type="button">コードを作成</button>
+      </div>
+      <textarea id="syncCode" rows="3" placeholder="ここにコードが表示されます／相手のコードを貼り付けてください"></textarea>
+      <div class="sync-row">
+        <button id="syncCopy" type="button">コピー</button>
+        <button id="syncImport" type="button">取り込む</button>
+      </div>
+      <div class="sync-msg" id="syncMsg"></div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <span class="eyebrow">科目を選ぶ</span>
+  <div class="chips" id="subjectChips"></div>
+
+  <div class="quiz-card">
+    <div class="quiz-meta">
+      <span class="tags">
+        <span class="tag" id="qSubjectTag">経済学</span>
+        <span class="tag source" id="qSourceTag">オリジナル</span>
+      </span>
+      <span class="qnum num" id="qProgress">1 / 4</span>
+    </div>
+    <div class="quiz-q" id="qText"></div>
+    <div class="choices" id="qChoices"></div>
+    <div class="feedback" id="qFeedback" hidden>
+      <div class="verdict" id="qVerdict"></div>
+      <div class="exp" id="qExplanation"></div>
+    </div>
+    <button class="next-btn" id="qNext" hidden>次の問題へ</button>
+  </div>
+</section>
+
+<footer>
+  出題は本試験の出題形式にならったオリジナル練習問題です（過去問そのままではありません）。<br>
+  中小企業診断士 第1次試験 全7科目対応
+</footer>
+
+<script type="module" src="./js/app.js"></script>
+</body>
+</html>
