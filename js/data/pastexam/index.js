@@ -7,6 +7,7 @@ import { FIN_2026_QUESTIONS } from "./fin-2026.js";
 import { OPS_2026_QUESTIONS } from "./ops-2026.js";
 import { MGT_2026_QUESTIONS } from "./mgt-2026.js";
 import { ECON_2026_QUESTIONS } from "./econ-2026.js";
+import { ECON_2019_QUESTIONS } from "./econ-2019.js";
 import { LAW_2026_QUESTIONS } from "./law-2026.js";
 import { SME_2019_QUESTIONS } from "./sme-2019.js";
 import { SME_2020_QUESTIONS } from "./sme-2020.js";
@@ -23,6 +24,7 @@ export const PASTEXAM_QUESTIONS = [
   ...OPS_2026_QUESTIONS,
   ...MGT_2026_QUESTIONS,
   ...ECON_2026_QUESTIONS,
+  ...ECON_2019_QUESTIONS,
   ...LAW_2026_QUESTIONS,
   ...SME_2019_QUESTIONS,
   ...SME_2020_QUESTIONS,
