@@ -17,6 +17,7 @@ import { OPS_2021_QUESTIONS } from "./ops-2021.js";
 import { OPS_2022_QUESTIONS } from "./ops-2022.js";
 import { OPS_2023_QUESTIONS } from "./ops-2023.js";
 import { OPS_2024_QUESTIONS } from "./ops-2024.js";
+import { OPS_2025_QUESTIONS } from "./ops-2025.js";
 import { OPS_2026_QUESTIONS } from "./ops-2026.js";
 import { MGT_2026_QUESTIONS } from "./mgt-2026.js";
 import { MGT_2019_QUESTIONS } from "./mgt-2019.js";
@@ -60,6 +61,7 @@ export const PASTEXAM_QUESTIONS = [
   ...OPS_2022_QUESTIONS,
   ...OPS_2023_QUESTIONS,
   ...OPS_2024_QUESTIONS,
+  ...OPS_2025_QUESTIONS,
   ...OPS_2026_QUESTIONS,
   ...MGT_2026_QUESTIONS,
   ...MGT_2019_QUESTIONS,
