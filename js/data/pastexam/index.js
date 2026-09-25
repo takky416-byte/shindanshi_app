@@ -17,6 +17,7 @@ import { MGT_2019_QUESTIONS } from "./mgt-2019.js";
 import { MGT_2020_QUESTIONS } from "./mgt-2020.js";
 import { MGT_2021_QUESTIONS } from "./mgt-2021.js";
 import { MGT_2022_QUESTIONS } from "./mgt-2022.js";
+import { MGT_2023_QUESTIONS } from "./mgt-2023.js";
 import { ECON_2026_QUESTIONS } from "./econ-2026.js";
 import { ECON_2019_QUESTIONS } from "./econ-2019.js";
 import { ECON_2020_QUESTIONS } from "./econ-2020.js";
@@ -51,6 +52,7 @@ export const PASTEXAM_QUESTIONS = [
   ...MGT_2020_QUESTIONS,
   ...MGT_2021_QUESTIONS,
   ...MGT_2022_QUESTIONS,
+  ...MGT_2023_QUESTIONS,
   ...ECON_2026_QUESTIONS,
   ...ECON_2019_QUESTIONS,
   ...ECON_2020_QUESTIONS,
