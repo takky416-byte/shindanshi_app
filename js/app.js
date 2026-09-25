@@ -14,6 +14,7 @@ import { QUESTIONS, SUBJECTS } from "./questions.js";
   var queue = [];
   var queueIdx = 0;
   var answeredThisQuestion = false;
+  var dashExpanded = false;
 
   function shuffle(arr) {
     var a = arr.slice();
@@ -168,6 +169,12 @@ import { QUESTIONS, SUBJECTS } from "./questions.js";
   function renderCompare() {
     var sh = stats("husband");
     var sw = stats("wife");
+
+    var summary = document.getElementById("dashSummary");
+    summary.innerHTML =
+      '<span><strong>' + escapeHtml(names.husband) + '</strong>：' + sh.total + '問・' + sh.accuracy + '%</span>' +
+      '<span><strong>' + escapeHtml(names.wife) + '</strong>：' + sw.total + '問・' + sw.accuracy + '%</span>';
+
     var grid = document.getElementById("compareGrid");
     grid.innerHTML = "";
     [["husband", sh, names.husband], ["wife", sw, names.wife]].forEach(function (pair) {
@@ -211,6 +218,14 @@ import { QUESTIONS, SUBJECTS } from "./questions.js";
     return Math.max(stat.pct / 2, 4);
   }
 
+  // ---------- 表示切替：ダッシュボードの折りたたみ ----------
+  function applyDashState() {
+    document.getElementById("dashBody").hidden = !dashExpanded;
+    document.getElementById("dashSummary").hidden = dashExpanded;
+    document.getElementById("dashToggle").setAttribute("aria-expanded", String(dashExpanded));
+    document.getElementById("dashToggleLabel").textContent = dashExpanded ? "隠す" : "見る";
+  }
+
   function escapeHtml(str) {
     var div = document.createElement("div");
     div.textContent = str;
@@ -236,6 +251,67 @@ import { QUESTIONS, SUBJECTS } from "./questions.js";
     });
   }
 
+  // 設問本文の描画。通常は text（プレーンテキスト、改行はそのまま保持）だが、
+  // 表やSQL文を含む設問は blocks（段落／表／コードの配列）を使う。
+  function renderQuestionBody(container, q) {
+    container.innerHTML = "";
+    if (!Array.isArray(q.blocks) || q.blocks.length === 0) {
+      var p = document.createElement("p");
+      p.className = "q-p";
+      p.textContent = q.text;
+      container.appendChild(p);
+      return;
+    }
+    q.blocks.forEach(function (block) {
+      if (block.type === "table") {
+        var wrap = document.createElement("div");
+        wrap.className = "q-table-wrap";
+        if (block.caption) {
+          var cap = document.createElement("div");
+          cap.className = "q-table-caption";
+          cap.textContent = block.caption;
+          wrap.appendChild(cap);
+        }
+        var table = document.createElement("table");
+        table.className = "q-table";
+        if (block.headers && block.headers.length) {
+          var thead = document.createElement("thead");
+          var htr = document.createElement("tr");
+          block.headers.forEach(function (h) {
+            var th = document.createElement("th");
+            th.textContent = h;
+            htr.appendChild(th);
+          });
+          thead.appendChild(htr);
+          table.appendChild(thead);
+        }
+        var tbody = document.createElement("tbody");
+        (block.rows || []).forEach(function (row) {
+          var tr = document.createElement("tr");
+          row.forEach(function (cell) {
+            var td = document.createElement("td");
+            td.textContent = cell;
+            tr.appendChild(td);
+          });
+          tbody.appendChild(tr);
+        });
+        table.appendChild(tbody);
+        wrap.appendChild(table);
+        container.appendChild(wrap);
+      } else if (block.type === "code") {
+        var pre = document.createElement("pre");
+        pre.className = "q-code";
+        pre.textContent = block.text;
+        container.appendChild(pre);
+      } else {
+        var para = document.createElement("p");
+        para.className = "q-p";
+        para.textContent = block.text;
+        container.appendChild(para);
+      }
+    });
+  }
+
   // ---------- 描画：クイズ ----------
   function renderQuestion() {
     if (queue.length === 0) buildQueue();
@@ -252,7 +328,7 @@ import { QUESTIONS, SUBJECTS } from "./questions.js";
       sourceTag.textContent = "オリジナル";
     }
     document.getElementById("qProgress").textContent = (queueIdx + 1) + " / " + queue.length;
-    document.getElementById("qText").textContent = q.text;
+    renderQuestionBody(document.getElementById("qText"), q);
 
     var keys = ["ア", "イ", "ウ", "エ", "オ"];
     var choicesWrap = document.getElementById("qChoices");
@@ -343,6 +419,12 @@ import { QUESTIONS, SUBJECTS } from "./questions.js";
       renderQuestion();
     });
 
+    document.getElementById("dashToggle").addEventListener("click", function () {
+      dashExpanded = !dashExpanded;
+      lsSet("shindanshi_dash_expanded", dashExpanded);
+      applyDashState();
+    });
+
     document.getElementById("settingsToggle").addEventListener("click", function () {
       var panel = document.getElementById("settingsPanel");
       panel.hidden = !panel.hidden;
@@ -403,12 +485,14 @@ import { QUESTIONS, SUBJECTS } from "./questions.js";
   // ---------- 起動 ----------
   function start() {
     activeUser = lsGet("shindanshi_active_user", "husband");
+    dashExpanded = lsGet("shindanshi_dash_expanded", false);
 
     loadNames();
     loadProgress();
 
     renderUserbar();
     renderCompare();
+    applyDashState();
     renderChips();
     buildQueue();
     renderQuestion();

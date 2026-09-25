@@ -32,9 +32,17 @@
 </div>
 
 <section>
-  <span class="eyebrow">夫婦の成績</span>
-  <div class="compare-grid" id="compareGrid"></div>
-  <div class="subject-bars" id="subjectBars"></div>
+  <div class="dash-header">
+    <span class="eyebrow">夫婦の成績</span>
+    <button class="dash-toggle" id="dashToggle" type="button" aria-expanded="false">
+      <span id="dashToggleLabel">見る</span>
+    </button>
+  </div>
+  <div class="dash-summary" id="dashSummary"></div>
+  <div id="dashBody" hidden>
+    <div class="compare-grid" id="compareGrid"></div>
+    <div class="subject-bars" id="subjectBars"></div>
+  </div>
   <button class="settings-toggle" id="settingsToggle">名前を編集する</button>
   <div class="settings-panel" id="settingsPanel" hidden>
     <label>夫の表示名<input id="nameH" maxlength="10"></label>

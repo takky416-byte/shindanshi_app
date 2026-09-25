@@ -43,6 +43,28 @@ export const IT_2024_QUESTIONS = [
 ];
 ```
 
+表やSQL文などを含む設問は、`text` の代わりに `blocks`（段落・表・コードの配列）を使う。表は実際の `<table>` として描画され、`text` は blocks から自動生成されるので書かなくてよい（検証スクリプトのフォールバック用に内部で自動生成される）。
+
+```js
+{
+  id: "it-r8-08",
+  subject: "it",
+  subjectName: "経営情報システム",
+  source: "pastexam",
+  year: 2026,
+  questionNumber: 8,
+  blocks: [
+    { type: "p", text: "……導入の段落……" },
+    { type: "table", caption: "任意のキャプション", headers: ["列1", "列2"], rows: [["値1", "値2"]] },
+    { type: "code", text: "SELECT * FROM foo;" },     // SQL文などの等幅表示ブロック
+    { type: "p", text: "……表の後に続く段落……" }
+  ],
+  choices: ["……", "……", "……", "……"],
+  answer: 0,
+  explanation: "……"
+}
+```
+
 `js/data/pastexam/index.js` 側で以下のように連結する：
 
 ```js

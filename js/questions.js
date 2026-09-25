@@ -3,4 +3,22 @@ import { ORIGINAL_QUESTIONS } from "./data/original.js";
 import { PASTEXAM_QUESTIONS } from "./data/pastexam/index.js";
 
 export { SUBJECTS };
-export const QUESTIONS = [...ORIGINAL_QUESTIONS, ...PASTEXAM_QUESTIONS];
+
+// 表やSQL文などを含む設問は text の代わりに blocks（段落・表・コードの配列）で
+// 出題文を組み立てる。blocks しかない設問には、検証やフォールバック表示のために
+// text（プレーンテキスト版）をここで自動生成しておく。
+function deriveText(q) {
+  if (q.text) return q.text;
+  if (Array.isArray(q.blocks)) {
+    return q.blocks
+      .filter((b) => b.type !== "table")
+      .map((b) => b.text)
+      .join("\n\n");
+  }
+  return "";
+}
+
+export const QUESTIONS = [...ORIGINAL_QUESTIONS, ...PASTEXAM_QUESTIONS].map((q) => ({
+  ...q,
+  text: deriveText(q)
+}));

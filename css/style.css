@@ -122,6 +122,32 @@ section { margin-bottom: 22px; }
   display: block;
 }
 
+.dash-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.dash-header .eyebrow { margin-bottom: 0; }
+.dash-toggle {
+  font-family: inherit;
+  font-size: 12px;
+  color: var(--navy-soft);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 6px 4px;
+  text-decoration: underline;
+}
+.dash-summary {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 12.5px;
+  color: var(--ink-soft);
+  background: var(--paper);
+  border-radius: 10px;
+  padding: 10px 12px;
+  margin-bottom: 10px;
+}
+.dash-summary strong { color: var(--ink); font-weight: 700; }
+#dashBody { margin-bottom: 4px; }
+
 .compare-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -182,7 +208,25 @@ section { margin-bottom: 22px; }
 .quiz-meta .tag { font-size: 11px; color: var(--accent-ink); background: color-mix(in srgb, var(--accent) 16%, var(--paper)); padding: 3px 9px; border-radius: 999px; font-weight: 700; letter-spacing: .02em; }
 .quiz-meta .tag.source { color: var(--ink-soft); background: color-mix(in srgb, var(--ink-soft) 12%, var(--paper)); font-weight: 500; }
 .quiz-meta .qnum { font-size: 11px; color: var(--ink-soft); }
-.quiz-q { font-size: 15.5px; line-height: 1.7; margin-bottom: 14px; white-space: pre-wrap; }
+.quiz-q { font-size: 15.5px; line-height: 1.7; margin-bottom: 14px; }
+.quiz-q .q-p { margin: 0 0 12px; white-space: pre-wrap; }
+.quiz-q .q-p:last-child { margin-bottom: 0; }
+.quiz-q .q-table-wrap { margin: 0 0 14px; overflow-x: auto; }
+.quiz-q .q-table-caption { font-size: 12px; font-weight: 700; color: var(--ink-soft); margin-bottom: 6px; }
+.quiz-q .q-table { border-collapse: collapse; width: 100%; font-size: 12.5px; }
+.quiz-q .q-table th, .quiz-q .q-table td { border: 1px solid var(--line); padding: 6px 8px; text-align: left; white-space: nowrap; }
+.quiz-q .q-table th { background: var(--bg); font-weight: 700; }
+.quiz-q .q-code {
+  margin: 0 0 14px;
+  padding: 10px 12px;
+  background: var(--bg);
+  border-radius: 8px;
+  font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  font-size: 12px;
+  line-height: 1.6;
+  overflow-x: auto;
+  white-space: pre;
+}
 .choices { display: flex; flex-direction: column; gap: 8px; }
 .choice-btn {
   font-family: inherit;

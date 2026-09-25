@@ -28,6 +28,31 @@ QUESTIONS.forEach((q, idx) => {
 
   if (!q.text || typeof q.text !== "string" || q.text.length < 5) errors.push(`${where}: text が不正または短すぎる`);
 
+  if (q.blocks !== undefined) {
+    if (!Array.isArray(q.blocks) || q.blocks.length === 0) {
+      errors.push(`${where}: blocks は空でない配列である必要がある`);
+    } else {
+      q.blocks.forEach((b, bi) => {
+        const bwhere = `${where} blocks[${bi}]`;
+        if (b.type === "table") {
+          if (!Array.isArray(b.headers) || !Array.isArray(b.rows)) {
+            errors.push(`${bwhere}: table は headers と rows の配列が必要`);
+          } else {
+            b.rows.forEach((row, ri) => {
+              if (!Array.isArray(row) || row.length !== b.headers.length) {
+                errors.push(`${bwhere} rows[${ri}]: 列数が headers（${b.headers.length}）と一致しない（現在: ${Array.isArray(row) ? row.length : typeof row}）`);
+              }
+            });
+          }
+        } else if (b.type === "p" || b.type === "code") {
+          if (!b.text || typeof b.text !== "string") errors.push(`${bwhere}: ${b.type} には text（文字列）が必要`);
+        } else {
+          errors.push(`${bwhere}: type は "p" / "table" / "code" のいずれか（現在: ${b.type}）`);
+        }
+      });
+    }
+  }
+
   if (!Array.isArray(q.choices) || q.choices.length < 2 || q.choices.length > 5) {
     errors.push(`${where}: choices は2〜5件の配列である必要がある（現在: ${Array.isArray(q.choices) ? q.choices.length : typeof q.choices}）`);
   } else if (q.choices.some((c) => typeof c !== "string" || c.length === 0)) {
