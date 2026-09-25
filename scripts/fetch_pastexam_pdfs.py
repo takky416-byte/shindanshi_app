@@ -65,11 +65,32 @@ class LinkExtractor(HTMLParser):
             self._current_text = []
 
 
+def sniff_charset(raw_bytes):
+    """HTTPヘッダーにcharsetが無いページ向けに、HTML先頭の<meta charset>等から推定する。"""
+    head = raw_bytes[:4096]
+    m = re.search(rb'charset=["\']?\s*([\w-]+)', head, re.IGNORECASE)
+    return m.group(1).decode("ascii", errors="ignore") if m else None
+
+
 def fetch(url):
     req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
     with urllib.request.urlopen(req, timeout=30) as resp:
-        charset = resp.headers.get_content_charset() or "utf-8"
-        return resp.read().decode(charset, errors="replace")
+        raw = resp.read()
+        header_charset = resp.headers.get_content_charset()
+
+    # 日本の古いサイトはHTTPヘッダーにcharsetが無く、実体は Shift_JIS（cp932）や
+    # EUC-JP であることが多い。ヘッダー→<meta>宣言→候補群の順に試し、文字化けを防ぐ。
+    candidates = []
+    for c in (header_charset, sniff_charset(raw), "utf-8", "cp932", "euc-jp"):
+        if c and c.lower() not in [x.lower() for x in candidates]:
+            candidates.append(c)
+
+    for enc in candidates:
+        try:
+            return raw.decode(enc)
+        except (LookupError, UnicodeDecodeError):
+            continue
+    return raw.decode("utf-8", errors="replace")
 
 
 def extract_links(html, base_url):
