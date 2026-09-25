@@ -5,6 +5,7 @@
 import { IT_2026_QUESTIONS } from "./it-2026.js";
 import { IT_2019_QUESTIONS } from "./it-2019.js";
 import { IT_2020_QUESTIONS } from "./it-2020.js";
+import { IT_2021_QUESTIONS } from "./it-2021.js";
 import { FIN_2026_QUESTIONS } from "./fin-2026.js";
 import { FIN_2019_QUESTIONS } from "./fin-2019.js";
 import { FIN_2020_QUESTIONS } from "./fin-2020.js";
@@ -58,6 +59,7 @@ export const PASTEXAM_QUESTIONS = [
   ...IT_2026_QUESTIONS,
   ...IT_2019_QUESTIONS,
   ...IT_2020_QUESTIONS,
+  ...IT_2021_QUESTIONS,
   ...FIN_2026_QUESTIONS,
   ...FIN_2019_QUESTIONS,
   ...FIN_2020_QUESTIONS,
