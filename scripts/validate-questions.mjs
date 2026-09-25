@@ -1,8 +1,13 @@
 #!/usr/bin/env node
 // 問題データの整合性チェック。過去問を追加するたびに実行すること。
 // 使い方: node scripts/validate-questions.mjs
+import { existsSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+import path from "node:path";
 import { SUBJECTS } from "../js/data/subjects.js";
 import { QUESTIONS } from "../js/questions.js";
+
+const repoRoot = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 
 const subjectKeys = new Set(SUBJECTS.filter((s) => s.key !== "all").map((s) => s.key));
 const errors = [];
@@ -46,8 +51,16 @@ QUESTIONS.forEach((q, idx) => {
           }
         } else if (b.type === "p" || b.type === "code") {
           if (!b.text || typeof b.text !== "string") errors.push(`${bwhere}: ${b.type} には text（文字列）が必要`);
+        } else if (b.type === "image") {
+          if (!b.src || typeof b.src !== "string") {
+            errors.push(`${bwhere}: image には src（文字列）が必要`);
+          } else {
+            const localPath = path.join(repoRoot, b.src.replace(/^\.\//, ""));
+            if (!existsSync(localPath)) errors.push(`${bwhere}: image src のファイルが存在しない（${b.src}）`);
+          }
+          if (!b.alt || typeof b.alt !== "string") errors.push(`${bwhere}: image には alt（代替テキスト）が必要`);
         } else {
-          errors.push(`${bwhere}: type は "p" / "table" / "code" のいずれか（現在: ${b.type}）`);
+          errors.push(`${bwhere}: type は "p" / "table" / "code" / "image" のいずれか（現在: ${b.type}）`);
         }
       });
     }

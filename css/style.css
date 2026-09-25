@@ -216,6 +216,16 @@ section { margin-bottom: 22px; }
 .quiz-q .q-table { border-collapse: collapse; width: 100%; font-size: 12.5px; }
 .quiz-q .q-table th, .quiz-q .q-table td { border: 1px solid var(--line); padding: 6px 8px; text-align: left; white-space: nowrap; }
 .quiz-q .q-table th { background: var(--bg); font-weight: 700; }
+.quiz-q .q-figure { margin: 0 0 14px; }
+.quiz-q .q-image {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: #fff;
+}
+.quiz-q .q-figure-caption { font-size: 11.5px; color: var(--ink-soft); margin-top: 6px; text-align: center; }
 .quiz-q .q-code {
   margin: 0 0 14px;
   padding: 10px 12px;

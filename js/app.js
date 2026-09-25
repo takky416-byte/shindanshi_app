@@ -303,6 +303,22 @@ import { QUESTIONS, SUBJECTS } from "./questions.js";
         pre.className = "q-code";
         pre.textContent = block.text;
         container.appendChild(pre);
+      } else if (block.type === "image") {
+        var figure = document.createElement("figure");
+        figure.className = "q-figure";
+        var img = document.createElement("img");
+        img.className = "q-image";
+        img.src = block.src;
+        img.alt = block.alt || "";
+        img.loading = "lazy";
+        figure.appendChild(img);
+        if (block.caption) {
+          var figcap = document.createElement("figcaption");
+          figcap.className = "q-figure-caption";
+          figcap.textContent = block.caption;
+          figure.appendChild(figcap);
+        }
+        container.appendChild(figure);
       } else {
         var para = document.createElement("p");
         para.className = "q-p";

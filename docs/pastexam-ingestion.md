@@ -65,6 +65,17 @@ export const IT_2024_QUESTIONS = [
 }
 ```
 
+グラフ・図表読み取りが前提の設問（経済学の需給曲線グラフ、国別推移グラフなど）は `text` 化できないため、`image` ブロックでPDFページから切り出した画像を埋め込む。画像ファイルはリポジトリの `img/pastexam/<subject>-<year>/` 以下に保存し、`src` はリポジトリルートからの相対パス（例: `./img/pastexam/eco-2026/q1.png`）で指定する。`alt` は画面読み上げ用の代替テキストとして必須。
+
+```js
+{
+  type: "image",
+  src: "./img/pastexam/eco-2026/q1.png",
+  alt: "日本・アメリカ・ドイツの財政収支（対GDP比）の推移グラフ",
+  caption: "任意：出所などの注記"  // 省略可
+}
+```
+
 `js/data/pastexam/index.js` 側で以下のように連結する：
 
 ```js
