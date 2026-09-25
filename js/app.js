@@ -239,11 +239,15 @@ import { QUESTIONS, SUBJECTS } from "./questions.js";
 
     document.getElementById("qSubjectTag").textContent = q.subjectName;
     var sourceTag = document.getElementById("qSourceTag");
-    sourceTag.textContent = q.source === "pastexam" ? "過去問" : "オリジナル";
+    if (q.source === "pastexam") {
+      sourceTag.textContent = q.year ? q.year + "年度 過去問" : "過去問";
+    } else {
+      sourceTag.textContent = "オリジナル";
+    }
     document.getElementById("qProgress").textContent = (queueIdx + 1) + " / " + queue.length;
     document.getElementById("qText").textContent = q.text;
 
-    var keys = ["ア", "イ", "ウ", "エ"];
+    var keys = ["ア", "イ", "ウ", "エ", "オ"];
     var choicesWrap = document.getElementById("qChoices");
     choicesWrap.innerHTML = "";
     q.choices.forEach(function (text, i) {

@@ -6,7 +6,8 @@
 ## 現在のアーキテクチャ（v1）
 
 - **ビルドレス・vanilla JS の静的PWA**。フレームワーク／バンドラなし。`index.html` を任意の静的ホスティング（GitHub Pages、Cloudflare Pages 等）にそのまま置けば動く。
-- `js/questions.js` … 問題データ。各設問に `source: "original" | "pastexam"` タグを持たせてある（過去問由来かオリジナルかを区別するため）。現状は全問 `original`。
+- `js/questions.js` … `js/data/original.js`（オリジナル問題）と `js/data/pastexam/index.js`（過去問。取り込み次第追加）を統合するエントリーポイント。各設問に `source: "original" | "pastexam"` タグを持たせてある。過去問の取り込み手順は [`docs/pastexam-ingestion.md`](./docs/pastexam-ingestion.md) を参照。
+- `scripts/validate-questions.mjs` … 問題データの整合性チェック（`node scripts/validate-questions.mjs`）。過去問追加時は必ず実行する。
 - `js/app.js` … アプリ本体。ユーザー切り替え、クイズ進行、夫婦比較ダッシュボード、同期コード、Service Worker登録、インストール導線を担当。
 - `manifest.webmanifest` / `sw.js` / `icons/` … PWA化（ホーム画面追加・オフライン利用）。`sw.js` はアプリシェルをキャッシュファーストで配信する。
 - 進捗データは **localStorage のみ**（バックエンド・アカウントなし）。夫婦間の同期は「同期コード」（進捗をBase64エンコードした文字列）をコピー&ペーストして手動マージする方式。設問ID＋タイムスタンプで重複排除してマージする（`mergeAnswered`）。
@@ -30,7 +31,8 @@ python3 -m http.server 8080
 ## 今後のロードマップ（引き継ぎブリーフィングのTODOより）
 
 - [x] PWA化（manifest.json, service worker, アイコン一式）
-- [ ] 過去問PDFのアップロード→構造化データ抽出パイプライン
+- [ ] 過去問PDFのアップロード→構造化データ抽出パイプライン（着手中）
+  - データ構造・検証スクリプト・受け入れ手順は整備済み（[`docs/pastexam-ingestion.md`](./docs/pastexam-ingestion.md)）。PDF自体のアップロード待ち。
   - 優先度高：経営情報システム、財務・会計、運営管理
   - 優先度中：企業経営理論、経済学・経済政策
   - 優先度低（最新年度のみ）：中小企業経営・政策
