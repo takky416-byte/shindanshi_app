@@ -196,12 +196,19 @@ import { QUESTIONS, SUBJECTS } from "./questions.js";
       row.innerHTML =
         '<div class="sname">' + escapeHtml(subj.name) + '</div>' +
         '<div class="subject-bar-track">' +
-          '<div class="subject-bar-fill h" style="width:' + (h.pct / 2) + '%"></div>' +
-          '<div class="subject-bar-fill w" style="width:' + (w.pct / 2) + '%"></div>' +
+          '<div class="subject-bar-fill h" style="width:' + barWidthPct(h) + '%"></div>' +
+          '<div class="subject-bar-fill w" style="width:' + barWidthPct(w) + '%"></div>' +
         '</div>' +
         '<div class="pct num">' + h.pct + '/' + w.pct + '</div>';
       bars.appendChild(row);
     });
+  }
+
+  // 解答数が1以上あるのにpct(正答率)が低いと帯がほぼ見えなくなるため、
+  // 解答済みの科目には最低限の可視幅を確保する。
+  function barWidthPct(stat) {
+    if (!stat.total) return 0;
+    return Math.max(stat.pct / 2, 4);
   }
 
   function escapeHtml(str) {

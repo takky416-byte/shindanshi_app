@@ -66,6 +66,7 @@
 }
 
 * { box-sizing: border-box; }
+[hidden] { display: none !important; }
 html, body { background: var(--bg); }
 body {
   color: var(--ink);
@@ -99,7 +100,8 @@ header.top .sub { font-size: 11px; color: var(--ink-soft); letter-spacing: .04em
 .user-btn {
   font-family: inherit;
   font-size: 12.5px;
-  padding: 6px 12px;
+  padding: 10px 14px;
+  min-height: 40px;
   border-radius: 999px;
   border: 1px solid var(--line);
   background: var(--paper);
@@ -153,11 +155,14 @@ section { margin-bottom: 22px; }
 .subject-bar-fill.w { background: var(--wife); }
 .subject-bar-row .pct { font-size: 10.5px; text-align: right; color: var(--ink-soft); }
 
-.chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
 .chip {
   font-family: inherit;
-  font-size: 12px;
-  padding: 6px 11px;
+  font-size: 12.5px;
+  padding: 10px 14px;
+  min-height: 40px;
+  display: inline-flex;
+  align-items: center;
   border-radius: 999px;
   border: 1px solid var(--line);
   background: var(--paper);
