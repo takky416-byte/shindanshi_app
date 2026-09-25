@@ -5,9 +5,11 @@
 import { IT_2026_QUESTIONS } from "./it-2026.js";
 import { FIN_2026_QUESTIONS } from "./fin-2026.js";
 import { OPS_2026_QUESTIONS } from "./ops-2026.js";
+import { MGT_2026_QUESTIONS } from "./mgt-2026.js";
 
 export const PASTEXAM_QUESTIONS = [
   ...IT_2026_QUESTIONS,
   ...FIN_2026_QUESTIONS,
-  ...OPS_2026_QUESTIONS
+  ...OPS_2026_QUESTIONS,
+  ...MGT_2026_QUESTIONS
 ];
