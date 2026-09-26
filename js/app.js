@@ -1,5 +1,22 @@
 import { QUESTIONS, SUBJECTS } from "./questions.js";
 
+// cloud-sync.js はFirebase SDK（外部CDN）を静的importしているため、ここで
+// 静的importすると、CDNに到達できない環境（電波不良・企業ネットワーク等）で
+// アプリ全体が起動しなくなってしまう。クラウド同期が実際に必要になった
+// タイミングで動的importし、失敗してもクイズ本体の動作には影響しないようにする。
+var cloudSyncModule = null;
+var cloudSyncModulePromise = null;
+function loadCloudSyncModule() {
+  if (cloudSyncModule) return Promise.resolve(cloudSyncModule);
+  if (!cloudSyncModulePromise) {
+    cloudSyncModulePromise = import("./cloud-sync.js").then(function (mod) {
+      cloudSyncModule = mod;
+      return mod;
+    });
+  }
+  return cloudSyncModulePromise;
+}
+
 (function () {
   "use strict";
 
@@ -11,10 +28,12 @@ import { QUESTIONS, SUBJECTS } from "./questions.js";
     wife: { answered: [], updatedAt: 0 }
   };
   var currentSubjectFilter = "all";
+  var currentYearFilter = "all";
   var queue = [];
   var queueIdx = 0;
   var answeredThisQuestion = false;
   var dashExpanded = false;
+  var cloudRoomId = null;
 
   function shuffle(arr) {
     var a = arr.slice();
@@ -25,8 +44,20 @@ import { QUESTIONS, SUBJECTS } from "./questions.js";
     return a;
   }
 
+  // 出題データに実在する年度一覧を新しい順で返す（年度は科目ごとに収録状況が
+  // 異なりうるため、決め打ちせずデータから動的に導出する）。
+  function getAvailableYears() {
+    var seen = {};
+    QUESTIONS.forEach(function (q) { if (q.year) seen[q.year] = true; });
+    return Object.keys(seen).map(Number).sort(function (a, b) { return b - a; });
+  }
+
   function buildQueue() {
-    var pool = currentSubjectFilter === "all" ? QUESTIONS : QUESTIONS.filter(function (q) { return q.subject === currentSubjectFilter; });
+    var pool = QUESTIONS.filter(function (q) {
+      var subjectOk = currentSubjectFilter === "all" || q.subject === currentSubjectFilter;
+      var yearOk = currentYearFilter === "all" || q.year === currentYearFilter;
+      return subjectOk && yearOk;
+    });
     queue = shuffle(pool);
     queueIdx = 0;
   }
@@ -102,6 +133,15 @@ import { QUESTIONS, SUBJECTS } from "./questions.js";
     return b64EncodeUnicode(JSON.stringify(payload));
   }
 
+  // 同期コードをURLのハッシュに埋め込んだ共有用リンクを作る。相手がこの
+  // リンクを開くだけで（コードの手動貼り付けなしに）進捗が取り込まれる。
+  function buildSyncUrl() {
+    var code = buildSyncCode();
+    var url = new URL(location.href);
+    url.hash = "";
+    return url.toString() + "#sync=" + encodeURIComponent(code);
+  }
+
   function applySyncCode(code) {
     var payload = JSON.parse(b64DecodeUnicode(code.trim()));
     if (!payload || typeof payload !== "object") throw new Error("invalid");
@@ -117,6 +157,22 @@ import { QUESTIONS, SUBJECTS } from "./questions.js";
     }
   }
 
+  // ページ読み込み時にURLハッシュに #sync=... が付いていれば自動で取り込む。
+  // リンクを受け取った側は、タップして開くだけで進捗が統合される。
+  function applyIncomingSyncFromUrl() {
+    var hash = location.hash || "";
+    if (hash.indexOf("#sync=") !== 0) return false;
+    var code = hash.slice("#sync=".length);
+    try {
+      applySyncCode(decodeURIComponent(code));
+      history.replaceState(null, "", location.pathname + location.search);
+      return true;
+    } catch (e) {
+      history.replaceState(null, "", location.pathname + location.search);
+      return false;
+    }
+  }
+
   function recordAnswer(userId, questionId, subject, correct) {
     var p = progress[userId];
     if (!p || typeof p !== "object" || !Array.isArray(p.answered)) {
@@ -128,6 +184,80 @@ import { QUESTIONS, SUBJECTS } from "./questions.js";
     p.updatedAt = Date.now();
     lsSet("shindanshi_progress_" + userId, p);
     renderCompare();
+    pushCloudProgress();
+  }
+
+  // ---------- クラウド同期（Firebase、ペアコードによるリアルタイム同期） ----------
+  function setCloudMsg(text, isErr) {
+    var el = document.getElementById("cloudSyncMsg");
+    if (!el) return;
+    el.textContent = text;
+    el.className = "sync-msg" + (isErr ? " err" : "");
+  }
+
+  function applyIncomingRoomData(data) {
+    if (!data || typeof data !== "object") return;
+    progress.husband = mergeProgress(progress.husband, data.husband);
+    progress.wife = mergeProgress(progress.wife, data.wife);
+    lsSet("shindanshi_progress_husband", progress.husband);
+    lsSet("shindanshi_progress_wife", progress.wife);
+    if (data.names) {
+      if (data.names.husband) names.husband = data.names.husband;
+      if (data.names.wife) names.wife = data.names.wife;
+      lsSet("shindanshi_name_h", names.husband);
+      lsSet("shindanshi_name_w", names.wife);
+    }
+    renderUserbar();
+    renderCompare();
+  }
+
+  function pushCloudProgress() {
+    if (!cloudRoomId) return;
+    loadCloudSyncModule().then(function (mod) {
+      return mod.pushRoomData(cloudRoomId, {
+        names: { husband: names.husband, wife: names.wife },
+        husband: progress.husband,
+        wife: progress.wife
+      });
+    }).catch(function () {
+      setCloudMsg("同期に失敗しました。電波状況を確認してもう一度お試しください。", true);
+    });
+  }
+
+  function connectCloudRoom(rawCode, isResume) {
+    loadCloudSyncModule().then(function (mod) {
+      var roomId = mod.sanitizeRoomCode(rawCode);
+      if (!roomId) {
+        setCloudMsg("ペアコードを入力してください。", true);
+        return;
+      }
+      cloudRoomId = roomId;
+      lsSet("shindanshi_room_code", roomId);
+      if (!isResume) setCloudMsg("接続中…", false);
+      mod.subscribeRoom(
+        roomId,
+        function (data) {
+          applyIncomingRoomData(data);
+          setCloudMsg("同期しています（ペアコード: " + roomId + "）", false);
+        },
+        function () {
+          setCloudMsg("エラー：接続できませんでした。ペアコードや通信環境を確認してください。", true);
+        }
+      ).then(function () {
+        pushCloudProgress();
+      }).catch(function () {
+        setCloudMsg("エラー：接続できませんでした。ペアコードや通信環境を確認してください。", true);
+      });
+    }).catch(function () {
+      setCloudMsg("クラウド同期の読み込みに失敗しました。通信環境を確認してもう一度お試しください（この端末単体でのご利用は引き続き可能です）。", true);
+    });
+  }
+
+  function disconnectCloudRoom() {
+    if (cloudSyncModule) cloudSyncModule.unsubscribeRoomListener();
+    cloudRoomId = null;
+    lsSet("shindanshi_room_code", "");
+    setCloudMsg("クラウド同期を停止しました（この端末のデータはそのまま残ります）", false);
   }
 
   // ---------- 集計 ----------
@@ -232,7 +362,7 @@ import { QUESTIONS, SUBJECTS } from "./questions.js";
     return div.innerHTML;
   }
 
-  // ---------- 描画：科目チップ ----------
+  // ---------- 描画：科目チップ・年度チップ ----------
   function renderChips() {
     var wrap = document.getElementById("subjectChips");
     wrap.innerHTML = "";
@@ -243,12 +373,38 @@ import { QUESTIONS, SUBJECTS } from "./questions.js";
       chip.setAttribute("data-active", currentSubjectFilter === s.key ? "true" : "false");
       chip.addEventListener("click", function () {
         currentSubjectFilter = s.key;
+        lsSet("shindanshi_subject_filter", currentSubjectFilter);
         renderChips();
         buildQueue();
         renderQuestion();
       });
       wrap.appendChild(chip);
     });
+
+    var yearWrap = document.getElementById("yearChips");
+    yearWrap.innerHTML = "";
+    var allYearsChip = document.createElement("button");
+    allYearsChip.className = "chip";
+    allYearsChip.textContent = "全年度";
+    allYearsChip.setAttribute("data-active", currentYearFilter === "all" ? "true" : "false");
+    allYearsChip.addEventListener("click", function () { setYearFilter("all"); });
+    yearWrap.appendChild(allYearsChip);
+    getAvailableYears().forEach(function (year) {
+      var chip = document.createElement("button");
+      chip.className = "chip";
+      chip.textContent = year + "年度";
+      chip.setAttribute("data-active", currentYearFilter === year ? "true" : "false");
+      chip.addEventListener("click", function () { setYearFilter(year); });
+      yearWrap.appendChild(chip);
+    });
+  }
+
+  function setYearFilter(year) {
+    currentYearFilter = year;
+    lsSet("shindanshi_year_filter", currentYearFilter);
+    renderChips();
+    buildQueue();
+    renderQuestion();
   }
 
   // 設問本文の描画。通常は text（プレーンテキスト、改行はそのまま保持）だが、
@@ -331,7 +487,16 @@ import { QUESTIONS, SUBJECTS } from "./questions.js";
   // ---------- 描画：クイズ ----------
   function renderQuestion() {
     if (queue.length === 0) buildQueue();
-    if (queue.length === 0) return;
+    var card = document.getElementById("qEmpty");
+    if (queue.length === 0) {
+      card.hidden = false;
+      document.getElementById("qText").innerHTML = "";
+      document.getElementById("qChoices").innerHTML = "";
+      document.getElementById("qFeedback").hidden = true;
+      document.getElementById("qNext").hidden = true;
+      return;
+    }
+    card.hidden = true;
     if (queueIdx >= queue.length) queueIdx = 0;
     var q = queue[queueIdx];
     answeredThisQuestion = false;
@@ -420,6 +585,14 @@ import { QUESTIONS, SUBJECTS } from "./questions.js";
     });
   }
 
+  function showSyncAppliedBanner() {
+    var banner = document.getElementById("syncAppliedBanner");
+    if (!banner) return;
+    document.getElementById("syncAppliedMsg").textContent =
+      names.husband + "さんと" + names.wife + "さんの進捗を統合しました";
+    banner.hidden = false;
+  }
+
   function registerServiceWorker() {
     if (!("serviceWorker" in navigator)) return;
     window.addEventListener("load", function () {
@@ -447,6 +620,7 @@ import { QUESTIONS, SUBJECTS } from "./questions.js";
       if (!panel.hidden) {
         document.getElementById("nameH").value = names.husband;
         document.getElementById("nameW").value = names.wife;
+        document.getElementById("roomCodeInput").value = cloudRoomId || "";
       }
     });
 
@@ -457,12 +631,47 @@ import { QUESTIONS, SUBJECTS } from "./questions.js";
       renderUserbar();
       renderCompare();
       document.getElementById("settingsPanel").hidden = true;
+      pushCloudProgress();
+    });
+
+    document.getElementById("cloudConnect").addEventListener("click", function () {
+      var code = document.getElementById("roomCodeInput").value;
+      connectCloudRoom(code, false);
+    });
+
+    document.getElementById("cloudDisconnect").addEventListener("click", function () {
+      disconnectCloudRoom();
+      document.getElementById("roomCodeInput").value = "";
     });
 
     document.getElementById("syncExport").addEventListener("click", function () {
       var code = buildSyncCode();
       document.getElementById("syncCode").value = code;
       showSyncMsg("コードを作成しました。相手の端末に伝えてください。", false);
+    });
+
+    document.getElementById("syncShareLink").addEventListener("click", async function () {
+      var url = buildSyncUrl();
+      if (navigator.share) {
+        try {
+          await navigator.share({ title: "診断士ジム 進捗の共有", url: url });
+          showSyncMsg("共有しました。", false);
+          return;
+        } catch (e) {
+          // ユーザーが共有をキャンセルした場合などはコピーにフォールバック
+        }
+      }
+      document.getElementById("syncCode").value = url;
+      try {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          await navigator.clipboard.writeText(url);
+          showSyncMsg("リンクをコピーしました。LINEなどに貼り付けて送ってください。", false);
+        } else {
+          showSyncMsg("リンクを作成しました。下のコード欄からコピーして送ってください。", false);
+        }
+      } catch (e) {
+        showSyncMsg("リンクを作成しました。下のコード欄からコピーして送ってください。", false);
+      }
     });
 
     document.getElementById("syncCopy").addEventListener("click", async function () {
@@ -502,9 +711,12 @@ import { QUESTIONS, SUBJECTS } from "./questions.js";
   function start() {
     activeUser = lsGet("shindanshi_active_user", "husband");
     dashExpanded = lsGet("shindanshi_dash_expanded", false);
+    currentSubjectFilter = lsGet("shindanshi_subject_filter", "all");
+    currentYearFilter = lsGet("shindanshi_year_filter", "all");
 
     loadNames();
     loadProgress();
+    var syncApplied = applyIncomingSyncFromUrl();
 
     renderUserbar();
     renderCompare();
@@ -515,6 +727,15 @@ import { QUESTIONS, SUBJECTS } from "./questions.js";
     bindEvents();
     setupInstallBanner();
     registerServiceWorker();
+
+    if (syncApplied) showSyncAppliedBanner();
+
+    document.getElementById("syncAppliedDismiss").addEventListener("click", function () {
+      document.getElementById("syncAppliedBanner").hidden = true;
+    });
+
+    var savedRoomCode = lsGet("shindanshi_room_code", "");
+    if (savedRoomCode) connectCloudRoom(savedRoomCode, true);
   }
 
   if (document.readyState === "loading") {

@@ -1,6 +1,6 @@
 // 診断士ジム service worker: アプリシェルをキャッシュしてオフライン利用を可能にする。
 // キャッシュ内容を更新した際は CACHE_NAME のバージョンを上げること。
-const CACHE_NAME = "shindanshi-shell-v3";
+const CACHE_NAME = "shindanshi-shell-v5";
 const PRECACHE_URLS = [
   "./",
   "./index.html",
@@ -8,6 +8,7 @@ const PRECACHE_URLS = [
   "./css/style.css",
   "./js/app.js",
   "./js/questions.js",
+  "./js/cloud-sync.js",
   "./js/data/subjects.js",
   "./js/data/pastexam/index.js",
   "./icons/icon-192.png",
@@ -15,6 +16,10 @@ const PRECACHE_URLS = [
   "./icons/icon-maskable-512.png",
   "./icons/apple-touch-icon.png"
 ];
+// Firebase SDK（gstatic.com）は cache.addAll の必須リストには含めない。
+// addAll は1件でも失敗すると全体が失敗し、コアアプリのオフライン化まで
+// 巻き添えになるため。初回オンライン利用時に fetch ハンドラのキャッシュ
+// 処理（下記）で自動的にキャッシュされ、以降はオフラインでも動作する。
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
