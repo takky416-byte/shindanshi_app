@@ -2,7 +2,7 @@
 // キャッシュ内容を更新した際は CACHE_NAME のバージョンを上げること
 // （合わせて js/version.js の APP_VERSION / APP_UPDATED も更新し、
 // 画面右上の表示からデプロイが反映されたかを確認できるようにする）。
-const CACHE_NAME = "shindanshi-shell-v12";
+const CACHE_NAME = "shindanshi-shell-v13";
 const PRECACHE_URLS = [
   "./",
   "./index.html",

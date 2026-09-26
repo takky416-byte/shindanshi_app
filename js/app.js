@@ -645,6 +645,82 @@ function withTimeout(promise, ms, timeoutMessage) {
         '</div>';
       bars.appendChild(row);
     });
+
+    renderReviewCta();
+    renderPaceCard();
+  }
+
+  // ---------- 弱点復習：全期間の解答履歴から「直近の解答が不正解」の
+  // 設問だけを集めた復習セットを作る ----------
+  function getWeakQuestionIds(userId) {
+    var answered = (progress[userId] && progress[userId].answered) || [];
+    var latest = {};
+    answered.forEach(function (a) {
+      if (!latest[a.q] || a.t > latest[a.q].t) latest[a.q] = a;
+    });
+    var ids = [];
+    Object.keys(latest).forEach(function (qid) {
+      if (!latest[qid].c) ids.push(qid);
+    });
+    return ids;
+  }
+
+  function renderReviewCta() {
+    var cta = document.getElementById("reviewCta");
+    if (!cta) return;
+    var ids = getWeakQuestionIds(activeUser);
+    if (ids.length === 0) {
+      cta.hidden = true;
+      return;
+    }
+    cta.hidden = false;
+    document.getElementById("reviewCount").textContent = ids.length;
+  }
+
+  function startReviewSession() {
+    var ids = getWeakQuestionIds(activeUser);
+    var qs = ids.map(getQuestionById).filter(Boolean);
+    if (qs.length === 0) return;
+    startSession(shuffle(qs));
+    renderQuestion(true);
+  }
+
+  // ---------- 学習ペースの可視化：試験日までの残り日数と必要ペース ----------
+  function getUnattemptedCount(userId) {
+    var answered = (progress[userId] && progress[userId].answered) || [];
+    var seen = {};
+    answered.forEach(function (a) { seen[a.q] = true; });
+    return Math.max(QUESTIONS.length - Object.keys(seen).length, 0);
+  }
+
+  function renderPaceCard() {
+    var card = document.getElementById("paceCard");
+    if (!card) return;
+    var examDate = lsGet("shindanshi_exam_date", "");
+    if (!examDate) {
+      card.innerHTML = '<div class="pace-empty">設定画面で試験日を登録すると、目標ペースが表示されます。</div>';
+      return;
+    }
+    var today = new Date();
+    today.setHours(0, 0, 0, 0);
+    var target = new Date(examDate + "T00:00:00");
+    var diffDays = Math.round((target - today) / (24 * 60 * 60 * 1000));
+
+    if (diffDays < 0) {
+      card.innerHTML = '<div class="pace-days">試験日（' + escapeHtml(examDate) + '）は過ぎています。設定から更新してください。</div>';
+      return;
+    }
+
+    var s = stats(activeUser);
+    var remaining = getUnattemptedCount(activeUser);
+    var actualPace = Math.round((s.week / 7) * 10) / 10;
+    var targetPace = diffDays > 0 ? Math.ceil(remaining / diffDays) : remaining;
+
+    card.innerHTML =
+      '<div class="pace-days">' + (diffDays === 0 ? '試験は<strong>今日</strong>です！' : '試験まで<strong>' + diffDays + '</strong>日') + '</div>' +
+      '<div class="pace-row"><span class="pace-label">未着手の問題</span><span class="pace-value num">' + remaining + '問</span></div>' +
+      '<div class="pace-row"><span class="pace-label">目標ペース（全問1周）</span><span class="pace-value num">' + targetPace + '問/日</span></div>' +
+      '<div class="pace-row"><span class="pace-label">' + escapeHtml(names[activeUser]) + 'さんの実ペース（直近7日平均）</span><span class="pace-value num ' + (actualPace >= targetPace ? "ok" : "ng") + '">' + actualPace + '問/日</span></div>';
   }
 
   // ---------- 表示切替：ダッシュボードの折りたたみ ----------
@@ -1129,6 +1205,8 @@ function withTimeout(promise, ms, timeoutMessage) {
       document.getElementById("detailOverlay").hidden = true;
     });
 
+    document.getElementById("reviewStartBtn").addEventListener("click", startReviewSession);
+
     document.getElementById("settingsToggle").addEventListener("click", function () {
       var panel = document.getElementById("settingsPanel");
       panel.hidden = !panel.hidden;
@@ -1136,6 +1214,7 @@ function withTimeout(promise, ms, timeoutMessage) {
         document.getElementById("nameH").value = names.husband;
         document.getElementById("nameW").value = names.wife;
         document.getElementById("roomCodeInput").value = cloudRoomId || "";
+        document.getElementById("examDateInput").value = lsGet("shindanshi_exam_date", "");
       }
     });
 
@@ -1143,6 +1222,7 @@ function withTimeout(promise, ms, timeoutMessage) {
       var h = document.getElementById("nameH").value.trim();
       var w = document.getElementById("nameW").value.trim();
       saveNames(h, w);
+      lsSet("shindanshi_exam_date", document.getElementById("examDateInput").value);
       renderUserbar();
       renderCompare();
       document.getElementById("settingsPanel").hidden = true;

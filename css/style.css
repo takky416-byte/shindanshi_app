@@ -154,6 +154,52 @@ section { margin-bottom: 22px; }
 .dash-summary strong { color: var(--ink); font-weight: 700; }
 #dashBody { margin-bottom: 4px; }
 
+.review-cta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  background: var(--bad-bg);
+  border: 1px solid var(--bad);
+  border-radius: 10px;
+  padding: 10px 12px;
+  margin-bottom: 10px;
+}
+.review-cta-text { font-size: 12px; color: var(--bad); line-height: 1.4; }
+.review-cta-text strong { font-size: 16px; }
+.review-cta button {
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 8px 14px;
+  border-radius: 999px;
+  border: none;
+  background: var(--bad);
+  color: var(--paper);
+  cursor: pointer;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.pace-card {
+  background: var(--paper);
+  border-radius: 10px;
+  box-shadow: var(--shadow);
+  padding: 12px 14px;
+  margin-bottom: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+.pace-days { font-size: 13px; color: var(--ink); }
+.pace-days strong { font-size: 18px; color: var(--user-accent); }
+.pace-row { display: flex; justify-content: space-between; align-items: center; font-size: 11.5px; gap: 8px; }
+.pace-label { color: var(--ink-soft); }
+.pace-value { font-weight: 700; color: var(--ink); flex-shrink: 0; }
+.pace-value.ok { color: var(--good); }
+.pace-value.ng { color: var(--bad); }
+.pace-empty { font-size: 12px; color: var(--ink-soft); line-height: 1.6; }
+
 .compare-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
