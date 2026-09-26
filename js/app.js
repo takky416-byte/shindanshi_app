@@ -596,31 +596,28 @@ function withTimeout(promise, ms, timeoutMessage) {
       });
     });
 
-    // 科目別比較：選んでいる本人が常に左側に来る対向型（綱引き型）バー。
-    // 「率」は正答率（0〜100%をそのまま半分の幅に対応させる）、
-    // 「数」は正解数（全科目中の最大値を基準にスケールし、科目間の
-    // 解答量の違いも一目でわかるようにする）。
+    // 科目別比較：選んでいる本人が常に左側に来る対向型（陣取り型）バー。
+    // 左右2人の値の比率でトラック全体（100%）を分け合い、余白は作らない
+    // （例：正解数が10対20なら、20の側が2/3を占める）。
     var barPairs = [["husband", sh], ["wife", sw]];
     if (activeUser === "wife") barPairs.reverse();
     var leftClass = barPairs[0][0] === "husband" ? "h" : "w";
     var rightClass = barPairs[1][0] === "husband" ? "h" : "w";
     var leftStat = barPairs[0][1], rightStat = barPairs[1][1];
 
-    var maxCorrect = 1;
-    SUBJECTS.forEach(function (s) {
-      if (s.key === "all") return;
-      maxCorrect = Math.max(maxCorrect, sh.bySubject[s.key].correct, sw.bySubject[s.key].correct);
-    });
+    function territoryWidths(a, b) {
+      var total = a + b;
+      if (total <= 0) return [0, 0];
+      return [(a / total) * 100, (b / total) * 100];
+    }
 
     var bars = document.getElementById("subjectBars");
     bars.innerHTML = "";
     SUBJECTS.forEach(function (subj) {
       if (subj.key === "all") return;
       var l = leftStat.bySubject[subj.key], r = rightStat.bySubject[subj.key];
-      var lPctW = l.total ? Math.max(l.pct, 4) : 0;
-      var rPctW = r.total ? Math.max(r.pct, 4) : 0;
-      var lCountW = l.correct ? Math.max(Math.round((l.correct / maxCorrect) * 100), 6) : 0;
-      var rCountW = r.correct ? Math.max(Math.round((r.correct / maxCorrect) * 100), 6) : 0;
+      var pctW = territoryWidths(l.pct, r.pct);
+      var countW = territoryWidths(l.correct, r.correct);
       var row = document.createElement("div");
       row.className = "subject-compare";
       row.innerHTML =
@@ -629,8 +626,8 @@ function withTimeout(promise, ms, timeoutMessage) {
           '<span class="scm-tag">率</span>' +
           '<span class="scm-num left ' + leftClass + '">' + l.pct + '%</span>' +
           '<div class="scm-track">' +
-            '<div class="scm-half left"><div class="scm-fill ' + leftClass + '" style="width:' + lPctW + '%"></div></div>' +
-            '<div class="scm-half right"><div class="scm-fill ' + rightClass + '" style="width:' + rPctW + '%"></div></div>' +
+            '<div class="scm-fill ' + leftClass + '" style="width:' + pctW[0] + '%"></div>' +
+            '<div class="scm-fill ' + rightClass + '" style="width:' + pctW[1] + '%"></div>' +
           '</div>' +
           '<span class="scm-num right ' + rightClass + '">' + r.pct + '%</span>' +
         '</div>' +
@@ -638,8 +635,8 @@ function withTimeout(promise, ms, timeoutMessage) {
           '<span class="scm-tag">数</span>' +
           '<span class="scm-num left ' + leftClass + '">' + l.correct + '問</span>' +
           '<div class="scm-track">' +
-            '<div class="scm-half left"><div class="scm-fill ' + leftClass + '" style="width:' + lCountW + '%"></div></div>' +
-            '<div class="scm-half right"><div class="scm-fill ' + rightClass + '" style="width:' + rCountW + '%"></div></div>' +
+            '<div class="scm-fill ' + leftClass + '" style="width:' + countW[0] + '%"></div>' +
+            '<div class="scm-fill ' + rightClass + '" style="width:' + countW[1] + '%"></div>' +
           '</div>' +
           '<span class="scm-num right ' + rightClass + '">' + r.correct + '問</span>' +
         '</div>';

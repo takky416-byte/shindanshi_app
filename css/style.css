@@ -250,10 +250,7 @@ section { margin-bottom: 22px; }
 .scm-num.right { text-align: left; }
 .scm-num.h { color: var(--husband); }
 .scm-num.w { color: var(--wife); }
-.scm-track { display: flex; height: 7px; }
-.scm-half { flex: 1; display: flex; overflow: hidden; background: var(--line); }
-.scm-half.left { justify-content: flex-start; border-radius: 4px 0 0 4px; margin-right: 1px; }
-.scm-half.right { justify-content: flex-end; border-radius: 0 4px 4px 0; margin-left: 1px; }
+.scm-track { display: flex; height: 7px; border-radius: 4px; overflow: hidden; background: var(--line); }
 .scm-fill { height: 100%; }
 .scm-fill.h { background: var(--husband); }
 .scm-fill.w { background: var(--wife); }
