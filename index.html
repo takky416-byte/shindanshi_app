@@ -7,6 +7,16 @@
 <meta name="description" content="夫婦で中小企業診断士1次試験対策。スマホの隙間時間で過去問道場スタイルの演習ができるPWA。">
 <meta name="theme-color" content="#29443C" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#16201B" media="(prefers-color-scheme: dark)">
+<script>
+// テーマ（ライト/ダーク）の手動指定を、CSS読み込み前に適用しておくことで
+// 「自動→手動指定」への切り替わりのチラつき（FOUC）を防ぐ。
+try {
+  var savedTheme = JSON.parse(localStorage.getItem("shindanshi_theme") || "null");
+  if (savedTheme === "light" || savedTheme === "dark") {
+    document.documentElement.setAttribute("data-theme", savedTheme);
+  }
+} catch (e) {}
+</script>
 <link rel="manifest" href="./manifest.webmanifest">
 <link rel="icon" href="./icons/icon-192.png">
 <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png">
@@ -97,6 +107,13 @@
   </div>
   <button class="settings-toggle" id="settingsToggle">設定（名前・端末間の同期）</button>
   <div class="settings-panel" id="settingsPanel" hidden>
+    <label>テーマ（この端末のみ）
+      <div class="chips theme-chips" id="themeChips">
+        <button type="button" class="chip" data-theme-option="auto">自動</button>
+        <button type="button" class="chip" data-theme-option="light">ライト</button>
+        <button type="button" class="chip" data-theme-option="dark">ダーク</button>
+      </div>
+    </label>
     <label>夫の表示名<input id="nameH" maxlength="10"></label>
     <label>妻の表示名<input id="nameW" maxlength="10"></label>
     <label>試験日<input id="examDateInput" type="date"></label>

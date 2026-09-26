@@ -612,6 +612,34 @@ function withTimeout(promise, ms, timeoutMessage) {
     root.setProperty("--user-accent-bg", "var(--" + activeUser + "-bg)");
   }
 
+  // ---------- テーマ（ライト/ダーク、この端末のみのローカル設定） ----------
+  // "auto"（既定）はOS/ブラウザの配色設定に追従する。index.html冒頭の
+  // インラインスクリプトが初回描画前にも同じ値を適用し、チラつきを防いでいる。
+  function applyTheme(theme) {
+    if (theme === "light" || theme === "dark") {
+      document.documentElement.setAttribute("data-theme", theme);
+    } else {
+      document.documentElement.removeAttribute("data-theme");
+    }
+    // アドレスバー等の色（theme-color）も、手動指定時はOS設定に関係なく
+    // 追従させる。2つのmetaはprefers-color-schemeで出し分けられるため、
+    // どちらが実際に使われても同じ色になるよう両方の内容を書き換える。
+    var lightColor = theme === "dark" ? "#16201B" : "#29443C";
+    var darkColor = theme === "light" ? "#29443C" : "#16201B";
+    document.querySelectorAll('meta[name="theme-color"]').forEach(function (meta) {
+      if (meta.media === "(prefers-color-scheme: light)") meta.setAttribute("content", lightColor);
+      else if (meta.media === "(prefers-color-scheme: dark)") meta.setAttribute("content", darkColor);
+    });
+    document.querySelectorAll("#themeChips .chip").forEach(function (btn) {
+      btn.setAttribute("data-active", btn.getAttribute("data-theme-option") === theme ? "true" : "false");
+    });
+  }
+
+  function setTheme(theme) {
+    lsSet("shindanshi_theme", theme);
+    applyTheme(theme);
+  }
+
   // ---------- 描画：ユーザーバー ----------
   function renderUserbar() {
     var bar = document.getElementById("userbar");
@@ -1312,6 +1340,12 @@ function withTimeout(promise, ms, timeoutMessage) {
 
     document.getElementById("pushEnable").addEventListener("click", enablePushNotifications);
 
+    document.querySelectorAll("#themeChips .chip").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        setTheme(btn.getAttribute("data-theme-option"));
+      });
+    });
+
     document.getElementById("syncExport").addEventListener("click", function () {
       var code = buildSyncCode();
       document.getElementById("syncCode").value = code;
@@ -1382,6 +1416,7 @@ function withTimeout(promise, ms, timeoutMessage) {
 
     activeUser = lsGet("shindanshi_active_user", "husband");
     applyUserAccent();
+    applyTheme(lsGet("shindanshi_theme", "auto"));
     dashExpanded = lsGet("shindanshi_dash_expanded", false);
     currentSubjectFilter = lsGet("shindanshi_subject_filter", "all");
     currentYearFilter = lsGet("shindanshi_year_filter", "all");

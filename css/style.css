@@ -270,6 +270,8 @@ section { margin-bottom: 22px; }
   cursor: pointer;
 }
 .chip[data-active="true"] { background: var(--user-accent); color: var(--paper); border-color: var(--user-accent); }
+.theme-chips { margin-bottom: 0; }
+.theme-chips .chip[data-active="true"] { background: var(--navy); border-color: var(--navy); }
 
 .quiz-card {
   background: var(--paper);
