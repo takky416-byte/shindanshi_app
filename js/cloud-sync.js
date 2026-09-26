@@ -39,7 +39,7 @@ const firebaseConfig = {
 // 「ウェブ構成」→「ウェブプッシュ証明書」で鍵ペアを生成し、
 // その「キーペア」の値をここに設定すること（未設定のままだと通知の
 // 有効化がエラーになる）。
-const VAPID_PUBLIC_KEY = "REPLACE_WITH_FIREBASE_CONSOLE_VAPID_KEY";
+const VAPID_PUBLIC_KEY = "BFzS8x0iDF9lS7CkKvCci424ptN8U0YKcaz2iVo5nyQlMaUtXXqoKVac2RqRNR9BLhChWVp3zkYC22sv_W1gsto";
 
 var app = null;
 var auth = null;
