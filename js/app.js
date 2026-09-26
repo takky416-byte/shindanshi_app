@@ -17,6 +17,22 @@ function loadCloudSyncModule() {
   return cloudSyncModulePromise;
 }
 
+// 広告ブロッカーやネットワーク側の制限でFirebaseへの通信が固まった場合、
+// dynamic import や Firestore の呼び出しがエラーにも成功にもならずいつまでも
+// 待たされることがある。一定時間で強制的にタイムアウトさせ、必ず利用者に
+// 何かしらのフィードバック（成功 or エラー）が届くようにする。
+function withTimeout(promise, ms, timeoutMessage) {
+  return new Promise(function (resolve, reject) {
+    var timer = setTimeout(function () {
+      reject(new Error(timeoutMessage || "timeout"));
+    }, ms);
+    promise.then(
+      function (v) { clearTimeout(timer); resolve(v); },
+      function (e) { clearTimeout(timer); reject(e); }
+    );
+  });
+}
+
 (function () {
   "use strict";
 
@@ -211,21 +227,32 @@ function loadCloudSyncModule() {
     renderCompare();
   }
 
+  var CLOUD_TIMEOUT_MS = 10000;
+  var CLOUD_TIMEOUT_MSG = "エラー：接続がタイムアウトしました。広告ブロッカーや会社・学校のネットワーク、VPN/プライベートDNSの設定などでgoogleapis.com / gstatic.comへの通信がブロックされていないか確認してください。";
+
   function pushCloudProgress() {
     if (!cloudRoomId) return;
-    loadCloudSyncModule().then(function (mod) {
-      return mod.pushRoomData(cloudRoomId, {
-        names: { husband: names.husband, wife: names.wife },
-        husband: progress.husband,
-        wife: progress.wife
-      });
-    }).catch(function () {
-      setCloudMsg("同期に失敗しました。電波状況を確認してもう一度お試しください。", true);
+    withTimeout(
+      loadCloudSyncModule().then(function (mod) {
+        return mod.pushRoomData(cloudRoomId, {
+          names: { husband: names.husband, wife: names.wife },
+          husband: progress.husband,
+          wife: progress.wife
+        });
+      }),
+      CLOUD_TIMEOUT_MS,
+      CLOUD_TIMEOUT_MSG
+    ).catch(function (err) {
+      setCloudMsg(err && err.message === CLOUD_TIMEOUT_MSG ? CLOUD_TIMEOUT_MSG : "同期に失敗しました。電波状況を確認してもう一度お試しください。", true);
     });
   }
 
   function connectCloudRoom(rawCode, isResume) {
-    loadCloudSyncModule().then(function (mod) {
+    // まずボタンを押した時点で即座にフィードバックを出す。裏側の読み込みが
+    // 固まっても、利用者が「何も起きていない」と感じることがないようにする。
+    if (!isResume) setCloudMsg("接続中…", false);
+
+    withTimeout(loadCloudSyncModule(), CLOUD_TIMEOUT_MS, CLOUD_TIMEOUT_MSG).then(function (mod) {
       var roomId = mod.sanitizeRoomCode(rawCode);
       if (!roomId) {
         setCloudMsg("ペアコードを入力してください。", true);
@@ -233,23 +260,31 @@ function loadCloudSyncModule() {
       }
       cloudRoomId = roomId;
       lsSet("shindanshi_room_code", roomId);
-      if (!isResume) setCloudMsg("接続中…", false);
-      mod.subscribeRoom(
-        roomId,
-        function (data) {
-          applyIncomingRoomData(data);
-          setCloudMsg("同期しています（ペアコード: " + roomId + "）", false);
-        },
-        function () {
-          setCloudMsg("エラー：接続できませんでした。ペアコードや通信環境を確認してください。", true);
-        }
+      withTimeout(
+        mod.subscribeRoom(
+          roomId,
+          function (data) {
+            applyIncomingRoomData(data);
+            setCloudMsg("同期しています（ペアコード: " + roomId + "）", false);
+          },
+          function () {
+            setCloudMsg("エラー：接続できませんでした。ペアコードや通信環境を確認してください。", true);
+          }
+        ),
+        CLOUD_TIMEOUT_MS,
+        CLOUD_TIMEOUT_MSG
       ).then(function () {
         pushCloudProgress();
-      }).catch(function () {
-        setCloudMsg("エラー：接続できませんでした。ペアコードや通信環境を確認してください。", true);
+      }).catch(function (err) {
+        setCloudMsg(err && err.message === CLOUD_TIMEOUT_MSG ? CLOUD_TIMEOUT_MSG : "エラー：接続できませんでした。ペアコードや通信環境を確認してください。", true);
       });
-    }).catch(function () {
-      setCloudMsg("クラウド同期の読み込みに失敗しました。通信環境を確認してもう一度お試しください（この端末単体でのご利用は引き続き可能です）。", true);
+    }).catch(function (err) {
+      setCloudMsg(
+        err && err.message === CLOUD_TIMEOUT_MSG
+          ? CLOUD_TIMEOUT_MSG
+          : "クラウド同期の読み込みに失敗しました。通信環境を確認してもう一度お試しください（この端末単体でのご利用は引き続き可能です）。",
+        true
+      );
     });
   }
 
