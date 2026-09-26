@@ -17,6 +17,10 @@
   --husband-bg: #DEE6EC;
   --wife: #8B3A42;
   --wife-bg: #F3DEE0;
+  /* 選択中の本人のテーマカラー。既定値は夫だが、js/app.js が起動時・
+     ユーザー切り替え時に --husband / --wife を指すよう上書きする。 */
+  --user-accent: var(--husband);
+  --user-accent-bg: var(--husband-bg);
   --shadow: 0 1px 2px rgba(31,42,36,.06), 0 6px 16px rgba(31,42,36,.06);
   --radius: 14px;
 }
@@ -188,13 +192,25 @@ section { margin-bottom: 22px; }
   cursor: pointer;
 }
 
-.subject-bars { margin-top: 14px; display: flex; flex-direction: column; gap: 7px; }
-.subject-bar-row { display: grid; grid-template-columns: 78px 1fr 30px; align-items: center; gap: 8px; }
-.subject-bar-row .sname { font-size: 11px; color: var(--ink-soft); }
-.subject-bar-track { height: 7px; border-radius: 4px; background: var(--line); overflow: hidden; display: flex; }
-.subject-bar-fill.h { background: var(--husband); }
-.subject-bar-fill.w { background: var(--wife); }
-.subject-bar-row .pct { font-size: 10.5px; text-align: right; color: var(--ink-soft); }
+/* 科目別比較：選んでいる本人を左側にした対向型（綱引き型）バー。
+   「率」＝正答率、「数」＝正解数（全科目中の最大値を基準にスケール）。 */
+.subject-bars { margin-top: 14px; display: flex; flex-direction: column; gap: 12px; }
+.subject-compare-name { font-size: 11.5px; font-weight: 700; color: var(--ink); margin-bottom: 5px; }
+.scm-row { display: grid; grid-template-columns: 13px 36px 1fr 36px; align-items: center; gap: 6px; margin-bottom: 4px; }
+.scm-row:last-child { margin-bottom: 0; }
+.scm-tag { font-size: 9.5px; color: var(--ink-soft); text-align: center; }
+.scm-num { font-size: 10px; font-weight: 700; white-space: nowrap; }
+.scm-num.left { text-align: right; }
+.scm-num.right { text-align: left; }
+.scm-num.h { color: var(--husband); }
+.scm-num.w { color: var(--wife); }
+.scm-track { display: flex; height: 7px; }
+.scm-half { flex: 1; display: flex; overflow: hidden; background: var(--line); }
+.scm-half.left { justify-content: flex-start; border-radius: 4px 0 0 4px; margin-right: 1px; }
+.scm-half.right { justify-content: flex-end; border-radius: 0 4px 4px 0; margin-left: 1px; }
+.scm-fill { height: 100%; }
+.scm-fill.h { background: var(--husband); }
+.scm-fill.w { background: var(--wife); }
 
 .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
 .chip {
@@ -210,13 +226,14 @@ section { margin-bottom: 22px; }
   color: var(--ink-soft);
   cursor: pointer;
 }
-.chip[data-active="true"] { background: var(--navy); color: var(--paper); border-color: var(--navy); }
+.chip[data-active="true"] { background: var(--user-accent); color: var(--paper); border-color: var(--user-accent); }
 
 .quiz-card {
   background: var(--paper);
   border-radius: var(--radius);
   box-shadow: var(--shadow);
   padding: 18px;
+  border-top: 3px solid var(--user-accent);
   scroll-margin-top: 70px;
 }
 .quiz-meta { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; gap: 8px; }
@@ -294,14 +311,14 @@ section { margin-bottom: 22px; }
   padding: 12px;
   border-radius: 10px;
   border: none;
-  background: var(--navy);
+  background: var(--user-accent);
   color: var(--paper);
   cursor: pointer;
 }
 .next-btn.secondary {
   background: var(--paper);
-  color: var(--navy);
-  border: 1px solid var(--navy);
+  color: var(--user-accent);
+  border: 1px solid var(--user-accent);
 }
 
 .result-card { scroll-margin-top: 70px; }

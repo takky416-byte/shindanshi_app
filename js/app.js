@@ -529,6 +529,14 @@ function withTimeout(promise, ms, timeoutMessage) {
     document.getElementById("detailOverlay").hidden = false;
   }
 
+  // 選んでいる本人のテーマカラーを画面全体に反映する（チップの選択色、
+  // 「次の問題へ」ボタン、問題カードの上部ラインなど）。
+  function applyUserAccent() {
+    var root = document.documentElement.style;
+    root.setProperty("--user-accent", "var(--" + activeUser + ")");
+    root.setProperty("--user-accent-bg", "var(--" + activeUser + "-bg)");
+  }
+
   // ---------- 描画：ユーザーバー ----------
   function renderUserbar() {
     var bar = document.getElementById("userbar");
@@ -542,6 +550,7 @@ function withTimeout(promise, ms, timeoutMessage) {
       btn.addEventListener("click", function () {
         activeUser = id;
         lsSet("shindanshi_active_user", activeUser);
+        applyUserAccent();
         renderUserbar();
         renderCompare();
       });
@@ -587,29 +596,55 @@ function withTimeout(promise, ms, timeoutMessage) {
       });
     });
 
+    // 科目別比較：選んでいる本人が常に左側に来る対向型（綱引き型）バー。
+    // 「率」は正答率（0〜100%をそのまま半分の幅に対応させる）、
+    // 「数」は正解数（全科目中の最大値を基準にスケールし、科目間の
+    // 解答量の違いも一目でわかるようにする）。
+    var barPairs = [["husband", sh], ["wife", sw]];
+    if (activeUser === "wife") barPairs.reverse();
+    var leftClass = barPairs[0][0] === "husband" ? "h" : "w";
+    var rightClass = barPairs[1][0] === "husband" ? "h" : "w";
+    var leftStat = barPairs[0][1], rightStat = barPairs[1][1];
+
+    var maxCorrect = 1;
+    SUBJECTS.forEach(function (s) {
+      if (s.key === "all") return;
+      maxCorrect = Math.max(maxCorrect, sh.bySubject[s.key].correct, sw.bySubject[s.key].correct);
+    });
+
     var bars = document.getElementById("subjectBars");
     bars.innerHTML = "";
     SUBJECTS.forEach(function (subj) {
       if (subj.key === "all") return;
-      var h = sh.bySubject[subj.key], w = sw.bySubject[subj.key];
+      var l = leftStat.bySubject[subj.key], r = rightStat.bySubject[subj.key];
+      var lPctW = l.total ? Math.max(l.pct, 4) : 0;
+      var rPctW = r.total ? Math.max(r.pct, 4) : 0;
+      var lCountW = l.correct ? Math.max(Math.round((l.correct / maxCorrect) * 100), 6) : 0;
+      var rCountW = r.correct ? Math.max(Math.round((r.correct / maxCorrect) * 100), 6) : 0;
       var row = document.createElement("div");
-      row.className = "subject-bar-row";
+      row.className = "subject-compare";
       row.innerHTML =
-        '<div class="sname">' + escapeHtml(subj.name) + '</div>' +
-        '<div class="subject-bar-track">' +
-          '<div class="subject-bar-fill h" style="width:' + barWidthPct(h) + '%"></div>' +
-          '<div class="subject-bar-fill w" style="width:' + barWidthPct(w) + '%"></div>' +
+        '<div class="subject-compare-name">' + escapeHtml(subj.name) + '</div>' +
+        '<div class="scm-row">' +
+          '<span class="scm-tag">率</span>' +
+          '<span class="scm-num left ' + leftClass + '">' + l.pct + '%</span>' +
+          '<div class="scm-track">' +
+            '<div class="scm-half left"><div class="scm-fill ' + leftClass + '" style="width:' + lPctW + '%"></div></div>' +
+            '<div class="scm-half right"><div class="scm-fill ' + rightClass + '" style="width:' + rPctW + '%"></div></div>' +
+          '</div>' +
+          '<span class="scm-num right ' + rightClass + '">' + r.pct + '%</span>' +
         '</div>' +
-        '<div class="pct num">' + h.pct + '/' + w.pct + '</div>';
+        '<div class="scm-row">' +
+          '<span class="scm-tag">数</span>' +
+          '<span class="scm-num left ' + leftClass + '">' + l.correct + '問</span>' +
+          '<div class="scm-track">' +
+            '<div class="scm-half left"><div class="scm-fill ' + leftClass + '" style="width:' + lCountW + '%"></div></div>' +
+            '<div class="scm-half right"><div class="scm-fill ' + rightClass + '" style="width:' + rCountW + '%"></div></div>' +
+          '</div>' +
+          '<span class="scm-num right ' + rightClass + '">' + r.correct + '問</span>' +
+        '</div>';
       bars.appendChild(row);
     });
-  }
-
-  // 解答数が1以上あるのにpct(正答率)が低いと帯がほぼ見えなくなるため、
-  // 解答済みの科目には最低限の可視幅を確保する。
-  function barWidthPct(stat) {
-    if (!stat.total) return 0;
-    return Math.max(stat.pct / 2, 4);
   }
 
   // ---------- 表示切替：ダッシュボードの折りたたみ ----------
@@ -1193,6 +1228,7 @@ function withTimeout(promise, ms, timeoutMessage) {
     if (versionEl) versionEl.textContent = APP_VERSION + " ・ " + APP_UPDATED;
 
     activeUser = lsGet("shindanshi_active_user", "husband");
+    applyUserAccent();
     dashExpanded = lsGet("shindanshi_dash_expanded", false);
     currentSubjectFilter = lsGet("shindanshi_subject_filter", "all");
     currentYearFilter = lsGet("shindanshi_year_filter", "all");
