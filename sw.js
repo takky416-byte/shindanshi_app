@@ -1,6 +1,6 @@
 // 診断士ジム service worker: アプリシェルをキャッシュしてオフライン利用を可能にする。
 // キャッシュ内容を更新した際は CACHE_NAME のバージョンを上げること。
-const CACHE_NAME = "shindanshi-shell-v3";
+const CACHE_NAME = "shindanshi-shell-v4";
 const PRECACHE_URLS = [
   "./",
   "./index.html",

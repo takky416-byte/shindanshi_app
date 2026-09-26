@@ -11,6 +11,7 @@ import { QUESTIONS, SUBJECTS } from "./questions.js";
     wife: { answered: [], updatedAt: 0 }
   };
   var currentSubjectFilter = "all";
+  var currentYearFilter = "all";
   var queue = [];
   var queueIdx = 0;
   var answeredThisQuestion = false;
@@ -25,8 +26,20 @@ import { QUESTIONS, SUBJECTS } from "./questions.js";
     return a;
   }
 
+  // 出題データに実在する年度一覧を新しい順で返す（年度は科目ごとに収録状況が
+  // 異なりうるため、決め打ちせずデータから動的に導出する）。
+  function getAvailableYears() {
+    var seen = {};
+    QUESTIONS.forEach(function (q) { if (q.year) seen[q.year] = true; });
+    return Object.keys(seen).map(Number).sort(function (a, b) { return b - a; });
+  }
+
   function buildQueue() {
-    var pool = currentSubjectFilter === "all" ? QUESTIONS : QUESTIONS.filter(function (q) { return q.subject === currentSubjectFilter; });
+    var pool = QUESTIONS.filter(function (q) {
+      var subjectOk = currentSubjectFilter === "all" || q.subject === currentSubjectFilter;
+      var yearOk = currentYearFilter === "all" || q.year === currentYearFilter;
+      return subjectOk && yearOk;
+    });
     queue = shuffle(pool);
     queueIdx = 0;
   }
@@ -102,6 +115,15 @@ import { QUESTIONS, SUBJECTS } from "./questions.js";
     return b64EncodeUnicode(JSON.stringify(payload));
   }
 
+  // 同期コードをURLのハッシュに埋め込んだ共有用リンクを作る。相手がこの
+  // リンクを開くだけで（コードの手動貼り付けなしに）進捗が取り込まれる。
+  function buildSyncUrl() {
+    var code = buildSyncCode();
+    var url = new URL(location.href);
+    url.hash = "";
+    return url.toString() + "#sync=" + encodeURIComponent(code);
+  }
+
   function applySyncCode(code) {
     var payload = JSON.parse(b64DecodeUnicode(code.trim()));
     if (!payload || typeof payload !== "object") throw new Error("invalid");
@@ -114,6 +136,22 @@ import { QUESTIONS, SUBJECTS } from "./questions.js";
       if (payload.names.wife && names.wife === "妻") names.wife = payload.names.wife;
       lsSet("shindanshi_name_h", names.husband);
       lsSet("shindanshi_name_w", names.wife);
+    }
+  }
+
+  // ページ読み込み時にURLハッシュに #sync=... が付いていれば自動で取り込む。
+  // リンクを受け取った側は、タップして開くだけで進捗が統合される。
+  function applyIncomingSyncFromUrl() {
+    var hash = location.hash || "";
+    if (hash.indexOf("#sync=") !== 0) return false;
+    var code = hash.slice("#sync=".length);
+    try {
+      applySyncCode(decodeURIComponent(code));
+      history.replaceState(null, "", location.pathname + location.search);
+      return true;
+    } catch (e) {
+      history.replaceState(null, "", location.pathname + location.search);
+      return false;
     }
   }
 
@@ -232,7 +270,7 @@ import { QUESTIONS, SUBJECTS } from "./questions.js";
     return div.innerHTML;
   }
 
-  // ---------- 描画：科目チップ ----------
+  // ---------- 描画：科目チップ・年度チップ ----------
   function renderChips() {
     var wrap = document.getElementById("subjectChips");
     wrap.innerHTML = "";
@@ -243,12 +281,38 @@ import { QUESTIONS, SUBJECTS } from "./questions.js";
       chip.setAttribute("data-active", currentSubjectFilter === s.key ? "true" : "false");
       chip.addEventListener("click", function () {
         currentSubjectFilter = s.key;
+        lsSet("shindanshi_subject_filter", currentSubjectFilter);
         renderChips();
         buildQueue();
         renderQuestion();
       });
       wrap.appendChild(chip);
     });
+
+    var yearWrap = document.getElementById("yearChips");
+    yearWrap.innerHTML = "";
+    var allYearsChip = document.createElement("button");
+    allYearsChip.className = "chip";
+    allYearsChip.textContent = "全年度";
+    allYearsChip.setAttribute("data-active", currentYearFilter === "all" ? "true" : "false");
+    allYearsChip.addEventListener("click", function () { setYearFilter("all"); });
+    yearWrap.appendChild(allYearsChip);
+    getAvailableYears().forEach(function (year) {
+      var chip = document.createElement("button");
+      chip.className = "chip";
+      chip.textContent = year + "年度";
+      chip.setAttribute("data-active", currentYearFilter === year ? "true" : "false");
+      chip.addEventListener("click", function () { setYearFilter(year); });
+      yearWrap.appendChild(chip);
+    });
+  }
+
+  function setYearFilter(year) {
+    currentYearFilter = year;
+    lsSet("shindanshi_year_filter", currentYearFilter);
+    renderChips();
+    buildQueue();
+    renderQuestion();
   }
 
   // 設問本文の描画。通常は text（プレーンテキスト、改行はそのまま保持）だが、
@@ -331,7 +395,16 @@ import { QUESTIONS, SUBJECTS } from "./questions.js";
   // ---------- 描画：クイズ ----------
   function renderQuestion() {
     if (queue.length === 0) buildQueue();
-    if (queue.length === 0) return;
+    var card = document.getElementById("qEmpty");
+    if (queue.length === 0) {
+      card.hidden = false;
+      document.getElementById("qText").innerHTML = "";
+      document.getElementById("qChoices").innerHTML = "";
+      document.getElementById("qFeedback").hidden = true;
+      document.getElementById("qNext").hidden = true;
+      return;
+    }
+    card.hidden = true;
     if (queueIdx >= queue.length) queueIdx = 0;
     var q = queue[queueIdx];
     answeredThisQuestion = false;
@@ -420,6 +493,14 @@ import { QUESTIONS, SUBJECTS } from "./questions.js";
     });
   }
 
+  function showSyncAppliedBanner() {
+    var banner = document.getElementById("syncAppliedBanner");
+    if (!banner) return;
+    document.getElementById("syncAppliedMsg").textContent =
+      names.husband + "さんと" + names.wife + "さんの進捗を統合しました";
+    banner.hidden = false;
+  }
+
   function registerServiceWorker() {
     if (!("serviceWorker" in navigator)) return;
     window.addEventListener("load", function () {
@@ -465,6 +546,30 @@ import { QUESTIONS, SUBJECTS } from "./questions.js";
       showSyncMsg("コードを作成しました。相手の端末に伝えてください。", false);
     });
 
+    document.getElementById("syncShareLink").addEventListener("click", async function () {
+      var url = buildSyncUrl();
+      if (navigator.share) {
+        try {
+          await navigator.share({ title: "診断士ジム 進捗の共有", url: url });
+          showSyncMsg("共有しました。", false);
+          return;
+        } catch (e) {
+          // ユーザーが共有をキャンセルした場合などはコピーにフォールバック
+        }
+      }
+      document.getElementById("syncCode").value = url;
+      try {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          await navigator.clipboard.writeText(url);
+          showSyncMsg("リンクをコピーしました。LINEなどに貼り付けて送ってください。", false);
+        } else {
+          showSyncMsg("リンクを作成しました。下のコード欄からコピーして送ってください。", false);
+        }
+      } catch (e) {
+        showSyncMsg("リンクを作成しました。下のコード欄からコピーして送ってください。", false);
+      }
+    });
+
     document.getElementById("syncCopy").addEventListener("click", async function () {
       var val = document.getElementById("syncCode").value;
       if (!val) { showSyncMsg("先に「コードを作成」するか、コードを貼り付けてください。", true); return; }
@@ -502,9 +607,12 @@ import { QUESTIONS, SUBJECTS } from "./questions.js";
   function start() {
     activeUser = lsGet("shindanshi_active_user", "husband");
     dashExpanded = lsGet("shindanshi_dash_expanded", false);
+    currentSubjectFilter = lsGet("shindanshi_subject_filter", "all");
+    currentYearFilter = lsGet("shindanshi_year_filter", "all");
 
     loadNames();
     loadProgress();
+    var syncApplied = applyIncomingSyncFromUrl();
 
     renderUserbar();
     renderCompare();
@@ -515,6 +623,12 @@ import { QUESTIONS, SUBJECTS } from "./questions.js";
     bindEvents();
     setupInstallBanner();
     registerServiceWorker();
+
+    if (syncApplied) showSyncAppliedBanner();
+
+    document.getElementById("syncAppliedDismiss").addEventListener("click", function () {
+      document.getElementById("syncAppliedBanner").hidden = true;
+    });
   }
 
   if (document.readyState === "loading") {

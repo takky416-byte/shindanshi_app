@@ -237,6 +237,7 @@ section { margin-bottom: 22px; }
   overflow-x: auto;
   white-space: pre;
 }
+.quiz-empty { font-size: 13.5px; line-height: 1.7; color: var(--ink-soft); padding: 8px 0 4px; }
 .choices { display: flex; flex-direction: column; gap: 8px; }
 .choice-btn {
   font-family: inherit;

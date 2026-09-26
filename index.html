@@ -31,6 +31,11 @@
   <button class="dismiss" id="installDismiss" type="button">閉じる</button>
 </div>
 
+<div class="install-banner" id="syncAppliedBanner" hidden>
+  <span id="syncAppliedMsg">進捗を取り込みました</span>
+  <button class="dismiss" id="syncAppliedDismiss" type="button">閉じる</button>
+</div>
+
 <section>
   <div class="dash-header">
     <span class="eyebrow">夫婦の成績</span>
@@ -43,18 +48,19 @@
     <div class="compare-grid" id="compareGrid"></div>
     <div class="subject-bars" id="subjectBars"></div>
   </div>
-  <button class="settings-toggle" id="settingsToggle">名前を編集する</button>
+  <button class="settings-toggle" id="settingsToggle">設定（名前・端末間の同期）</button>
   <div class="settings-panel" id="settingsPanel" hidden>
     <label>夫の表示名<input id="nameH" maxlength="10"></label>
     <label>妻の表示名<input id="nameW" maxlength="10"></label>
     <button id="saveNames">保存</button>
 
     <div class="sync-block">
-      <span class="sync-label">端末間で進捗を同期する（サインイン不要）<br>①片方の端末で「コードを作成」→②コードをコピーしてもう片方の端末に伝える（LINE等で送る）→③相手の端末で貼り付けて「取り込む」</span>
+      <span class="sync-label">端末間で進捗を同期する（サインイン不要）<br>「リンクで送る」→LINE等で相手に送る→相手がリンクをタップするだけで進捗が統合されます。</span>
       <div class="sync-row">
-        <button id="syncExport" type="button">コードを作成</button>
+        <button id="syncShareLink" type="button">リンクで送る</button>
+        <button id="syncExport" type="button">コードを作成（手動貼り付け用）</button>
       </div>
-      <textarea id="syncCode" rows="3" placeholder="ここにコードが表示されます／相手のコードを貼り付けてください"></textarea>
+      <textarea id="syncCode" rows="3" placeholder="ここにコードやリンクが表示されます／相手のコードを貼り付けてください"></textarea>
       <div class="sync-row">
         <button id="syncCopy" type="button">コピー</button>
         <button id="syncImport" type="button">取り込む</button>
@@ -68,6 +74,9 @@
   <span class="eyebrow">科目を選ぶ</span>
   <div class="chips" id="subjectChips"></div>
 
+  <span class="eyebrow">年度を選ぶ</span>
+  <div class="chips" id="yearChips"></div>
+
   <div class="quiz-card">
     <div class="quiz-meta">
       <span class="tags">
@@ -76,6 +85,7 @@
       </span>
       <span class="qnum num" id="qProgress">1 / 4</span>
     </div>
+    <div class="quiz-empty" id="qEmpty" hidden>この組み合わせに該当する問題がありません。科目または年度の選択を変えてください。</div>
     <div class="quiz-q" id="qText"></div>
     <div class="choices" id="qChoices"></div>
     <div class="feedback" id="qFeedback" hidden>
@@ -87,7 +97,7 @@
 </section>
 
 <footer>
-  出題は本試験の出題形式にならったオリジナル練習問題です（過去問そのままではありません）。<br>
+  中小企業診断士 第1次試験の過去問（2019〜2026年度）を収録しています。<br>
   中小企業診断士 第1次試験 全7科目対応
 </footer>
 
