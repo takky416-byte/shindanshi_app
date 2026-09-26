@@ -42,7 +42,7 @@ firebase deploy --only functions
 
 ## 4. 動作確認のしかた
 
-- **マイルストーン通知**：どちらかが解答を進めて累計が100の倍数を超えると、もう片方に届く。すぐ試したい場合は、`shindanshi_progress_*` の件数を100問超えるところまで実際に解答するか、Firestoreコンソールで該当ルームの `husband.answered` / `wife.answered` 配列の長さを手動で調整して書き込みを発生させても良い。
+- **マイルストーン通知**：どちらかが解答を進めて累計が50の倍数を超えると、もう片方に届く。すぐ試したい場合は、`shindanshi_progress_*` の件数を50問超えるところまで実際に解答するか、Firestoreコンソールで該当ルームの `husband.answered` / `wife.answered` 配列の長さを手動で調整して書き込みを発生させても良い。
 - **相手のペース通知**：毎日21:00（JST）に自動実行される。すぐ試したい場合は、Firebaseコンソール →「Cloud Scheduler」または「Cloud Functions」の該当ジョブ（`dailyPaceNotification`）から手動で「今すぐ実行」できる。
 - 通知が届かない場合は、まずFirebaseコンソールの「Functions」→ 各関数のログでエラーが出ていないか確認する（無効なトークン、VAPID鍵未設定などはログに出る）。
 

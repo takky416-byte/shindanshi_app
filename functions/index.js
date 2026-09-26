@@ -1,6 +1,6 @@
 // 診断士ジム：夫婦間のプッシュ通知。
 //
-// - マイルストーン通知：どちらかの累計解答数が100問区切りを超えたら、相手に知らせる。
+// - マイルストーン通知：どちらかの累計解答数が50問区切りを超えたら、相手に知らせる。
 // - 相手のペース通知：毎日21時（JST）に、直近7日間の解答数を相手に知らせる
 //   （0問の週は通知しない＝何もしていない相手を煽らない）。
 //
@@ -18,7 +18,7 @@ const { getMessaging } = require("firebase-admin/messaging");
 initializeApp();
 const db = getFirestore();
 
-const MILESTONE_STEP = 100;
+const MILESTONE_STEP = 50;
 const ROLES = ["husband", "wife"];
 const OTHER_ROLE = { husband: "wife", wife: "husband" };
 const DEFAULT_NAME = { husband: "夫", wife: "妻" };
