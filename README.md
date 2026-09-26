@@ -6,7 +6,7 @@
 ## 現在のアーキテクチャ（v1）
 
 - **ビルドレス・vanilla JS の静的PWA**。フレームワーク／バンドラなし。`index.html` を任意の静的ホスティング（GitHub Pages、Cloudflare Pages 等）にそのまま置けば動く。
-- `js/questions.js` … `js/data/original.js`（オリジナル問題）と `js/data/pastexam/index.js`（過去問。取り込み次第追加）を統合するエントリーポイント。各設問に `source: "original" | "pastexam"` タグを持たせてある。過去問の取り込み手順は [`docs/pastexam-ingestion.md`](./docs/pastexam-ingestion.md) を参照。
+- `js/questions.js` … `js/data/pastexam/index.js`（過去問、2019〜2026年度×7科目）を統合するエントリーポイント。各設問に `source: "pastexam"` タグを持たせてある。過去問の取り込み手順は [`docs/pastexam-ingestion.md`](./docs/pastexam-ingestion.md) を参照。
 - `scripts/validate-questions.mjs` … 問題データの整合性チェック（`node scripts/validate-questions.mjs`）。過去問追加時は必ず実行する。
 - `js/app.js` … アプリ本体。ユーザー切り替え、クイズ進行、夫婦比較ダッシュボード、同期コード、Service Worker登録、インストール導線を担当。
 - `manifest.webmanifest` / `sw.js` / `icons/` … PWA化（ホーム画面追加・オフライン利用）。`sw.js` はアプリシェルをキャッシュファーストで配信する。
