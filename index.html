@@ -56,6 +56,38 @@
     <div class="compare-grid" id="compareGrid"></div>
     <div class="subject-bars" id="subjectBars"></div>
   </div>
+
+  <div class="detail-overlay" id="detailOverlay" hidden>
+    <div class="detail-panel">
+      <div class="detail-header">
+        <h2 id="detailUserName">学習記録</h2>
+        <button class="detail-close" id="detailClose" type="button" aria-label="閉じる">&times;</button>
+      </div>
+      <div class="detail-body">
+        <div class="detail-stats" id="detailStats"></div>
+
+        <section class="detail-section">
+          <h3>直近7日間の解答数</h3>
+          <div class="detail-daybars" id="detailDayBars"></div>
+        </section>
+
+        <section class="detail-section">
+          <h3>科目別</h3>
+          <div class="detail-table" id="detailSubjectTable"></div>
+        </section>
+
+        <section class="detail-section">
+          <h3>年度別</h3>
+          <div class="detail-table" id="detailYearTable"></div>
+        </section>
+
+        <section class="detail-section">
+          <h3>直近の解答履歴</h3>
+          <div class="detail-history" id="detailHistory"></div>
+        </section>
+      </div>
+    </div>
+  </div>
   <button class="settings-toggle" id="settingsToggle">設定（名前・端末間の同期）</button>
   <div class="settings-panel" id="settingsPanel" hidden>
     <label>夫の表示名<input id="nameH" maxlength="10"></label>

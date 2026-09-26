@@ -350,6 +350,185 @@ function withTimeout(promise, ms, timeoutMessage) {
     return { total: total, correct: correct, accuracy: total ? Math.round((correct / total) * 100) : 0, week: week, bySubject: bySubject };
   }
 
+  // id から設問を引くためのマップ。1646件を毎回 .find() で探すと詳細画面を
+  // 開くたびに重くなるため、初回アクセス時に一度だけ構築してキャッシュする。
+  var questionById = null;
+  function getQuestionById(id) {
+    if (!questionById) {
+      questionById = {};
+      QUESTIONS.forEach(function (q) { questionById[q.id] = q; });
+    }
+    return questionById[id];
+  }
+
+  function dayKey(timestamp) {
+    var d = new Date(timestamp);
+    return d.getFullYear() + "-" + (d.getMonth() + 1) + "-" + d.getDate();
+  }
+
+  // ---------- 集計：個人ごとの学習記録詳細（科目別・年度別・連続日数・履歴） ----------
+  function detailedStats(userId) {
+    var answered = (progress[userId] && progress[userId].answered) || [];
+    var total = answered.length;
+    var correct = answered.filter(function (a) { return a.c; }).length;
+    var weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+    var week = answered.filter(function (a) { return a.t >= weekAgo; }).length;
+
+    var bySubject = {};
+    SUBJECTS.forEach(function (s) {
+      if (s.key === "all") return;
+      bySubject[s.key] = { name: s.name, total: 0, correct: 0 };
+    });
+    var byYear = {};
+
+    answered.forEach(function (a) {
+      if (bySubject[a.s]) {
+        bySubject[a.s].total++;
+        if (a.c) bySubject[a.s].correct++;
+      }
+      var q = getQuestionById(a.q);
+      if (q && q.year) {
+        byYear[q.year] = byYear[q.year] || { total: 0, correct: 0 };
+        byYear[q.year].total++;
+        if (a.c) byYear[q.year].correct++;
+      }
+    });
+
+    // 連続学習日数：今日から遡って、1問以上解答している日が何日連続で続いているか。
+    var daySet = {};
+    answered.forEach(function (a) { daySet[dayKey(a.t)] = true; });
+    var streak = 0;
+    var cursor = new Date();
+    while (daySet[dayKey(cursor.getTime())]) {
+      streak++;
+      cursor.setDate(cursor.getDate() - 1);
+    }
+
+    // 直近7日間の日別解答数（今日を含む、古い日から新しい日の順）。
+    var dayBars = [];
+    for (var i = 6; i >= 0; i--) {
+      var d = new Date();
+      d.setDate(d.getDate() - i);
+      var key = dayKey(d.getTime());
+      var count = answered.filter(function (a) { return dayKey(a.t) === key; }).length;
+      dayBars.push({ label: (d.getMonth() + 1) + "/" + d.getDate(), count: count, isToday: i === 0 });
+    }
+
+    var recent = answered.slice(-30).reverse().map(function (a) {
+      var q = getQuestionById(a.q);
+      var text = "";
+      if (q) {
+        text = q.text || (Array.isArray(q.blocks) && q.blocks.length && q.blocks[0].text) || "";
+        text = text.split("\n")[0];
+        if (text.length > 42) text = text.slice(0, 42) + "…";
+      }
+      return {
+        t: a.t,
+        correct: a.c,
+        subjectName: q ? q.subjectName : "",
+        year: q ? q.year : null,
+        text: text
+      };
+    });
+
+    return {
+      total: total, correct: correct,
+      accuracy: total ? Math.round((correct / total) * 100) : 0,
+      week: week, streak: streak,
+      bySubject: bySubject, byYear: byYear,
+      dayBars: dayBars, recent: recent
+    };
+  }
+
+  function formatHistoryDate(t) {
+    var d = new Date(t);
+    return (d.getMonth() + 1) + "/" + d.getDate() + " " +
+      ("0" + d.getHours()).slice(-2) + ":" + ("0" + d.getMinutes()).slice(-2);
+  }
+
+  // ---------- 描画：個人詳細画面 ----------
+  function renderDetailView(userId) {
+    var s = detailedStats(userId);
+    var label = names[userId];
+
+    document.getElementById("detailUserName").textContent = label + "さんの学習記録";
+
+    document.getElementById("detailStats").innerHTML =
+      '<div class="detail-stat"><div class="v num">' + s.total + '</div><div class="l">解答数（累計）</div></div>' +
+      '<div class="detail-stat"><div class="v num">' + s.accuracy + '%</div><div class="l">正答率</div></div>' +
+      '<div class="detail-stat"><div class="v num">' + s.week + '</div><div class="l">今週の解答数</div></div>' +
+      '<div class="detail-stat"><div class="v num">' + s.streak + '</div><div class="l">連続学習日数</div></div>';
+
+    var maxDay = Math.max.apply(null, s.dayBars.map(function (d) { return d.count; }).concat([1]));
+    var dayBarsEl = document.getElementById("detailDayBars");
+    dayBarsEl.innerHTML = "";
+    s.dayBars.forEach(function (d) {
+      var col = document.createElement("div");
+      col.className = "detail-daybar-col";
+      var barHeight = d.count ? Math.max(Math.round((d.count / maxDay) * 60), 6) : 2;
+      col.innerHTML =
+        '<div class="detail-daybar-count num">' + (d.count || "") + '</div>' +
+        '<div class="detail-daybar" style="height:' + barHeight + 'px"' + (d.isToday ? ' data-today="true"' : '') + '></div>' +
+        '<div class="detail-daybar-label">' + d.label + '</div>';
+      dayBarsEl.appendChild(col);
+    });
+
+    var subjectTable = document.getElementById("detailSubjectTable");
+    subjectTable.innerHTML = "";
+    SUBJECTS.forEach(function (subj) {
+      if (subj.key === "all") return;
+      var row = s.bySubject[subj.key];
+      var pct = row.total ? Math.round((row.correct / row.total) * 100) : 0;
+      var tr = document.createElement("div");
+      tr.className = "detail-table-row";
+      tr.innerHTML =
+        '<div class="detail-table-name">' + escapeHtml(subj.name) + '</div>' +
+        '<div class="detail-table-track"><div class="detail-table-fill" style="width:' + (row.total ? Math.max(pct, 4) : 0) + '%"></div></div>' +
+        '<div class="detail-table-nums num">' + row.correct + '/' + row.total + '　' + pct + '%</div>';
+      subjectTable.appendChild(tr);
+    });
+
+    var yearTable = document.getElementById("detailYearTable");
+    yearTable.innerHTML = "";
+    var years = Object.keys(s.byYear).map(Number).sort(function (a, b) { return b - a; });
+    if (years.length === 0) {
+      yearTable.innerHTML = '<div class="detail-empty">まだ解答記録がありません。</div>';
+    } else {
+      years.forEach(function (year) {
+        var row = s.byYear[year];
+        var pct = row.total ? Math.round((row.correct / row.total) * 100) : 0;
+        var tr = document.createElement("div");
+        tr.className = "detail-table-row";
+        tr.innerHTML =
+          '<div class="detail-table-name">' + year + '年度</div>' +
+          '<div class="detail-table-track"><div class="detail-table-fill" style="width:' + Math.max(pct, 4) + '%"></div></div>' +
+          '<div class="detail-table-nums num">' + row.correct + '/' + row.total + '　' + pct + '%</div>';
+        yearTable.appendChild(tr);
+      });
+    }
+
+    var historyEl = document.getElementById("detailHistory");
+    historyEl.innerHTML = "";
+    if (s.recent.length === 0) {
+      historyEl.innerHTML = '<div class="detail-empty">まだ解答記録がありません。</div>';
+    } else {
+      s.recent.forEach(function (item) {
+        var row = document.createElement("div");
+        row.className = "detail-history-row";
+        row.innerHTML =
+          '<span class="detail-history-verdict ' + (item.correct ? "ok" : "ng") + '">' + (item.correct ? "○" : "×") + '</span>' +
+          '<span class="detail-history-main">' +
+          '<span class="detail-history-tags">' + escapeHtml(item.subjectName) + (item.year ? '・' + item.year + '年度' : '') + '</span>' +
+          '<span class="detail-history-text">' + escapeHtml(item.text) + '</span>' +
+          '</span>' +
+          '<span class="detail-history-time num">' + formatHistoryDate(item.t) + '</span>';
+        historyEl.appendChild(row);
+      });
+    }
+
+    document.getElementById("detailOverlay").hidden = false;
+  }
+
   // ---------- 描画：ユーザーバー ----------
   function renderUserbar() {
     var bar = document.getElementById("userbar");
@@ -392,8 +571,15 @@ function withTimeout(promise, ms, timeoutMessage) {
         '<div class="row2">' +
         '<div><div class="n num">' + s.accuracy + '%</div><div class="l">正答率</div></div>' +
         '<div><div class="n num">' + s.week + '</div><div class="l">今週の解答数</div></div>' +
-        '</div>';
+        '</div>' +
+        '<button class="detail-open" type="button" data-user="' + id + '">詳しく見る &rarr;</button>';
       grid.appendChild(card);
+    });
+
+    grid.querySelectorAll(".detail-open").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        renderDetailView(btn.getAttribute("data-user"));
+      });
     });
 
     var bars = document.getElementById("subjectBars");
@@ -897,6 +1083,10 @@ function withTimeout(promise, ms, timeoutMessage) {
       dashExpanded = !dashExpanded;
       lsSet("shindanshi_dash_expanded", dashExpanded);
       applyDashState();
+    });
+
+    document.getElementById("detailClose").addEventListener("click", function () {
+      document.getElementById("detailOverlay").hidden = true;
     });
 
     document.getElementById("settingsToggle").addEventListener("click", function () {
