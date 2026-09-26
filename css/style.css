@@ -285,6 +285,39 @@ section { margin-bottom: 22px; }
   color: var(--paper);
   cursor: pointer;
 }
+.next-btn.secondary {
+  background: var(--paper);
+  color: var(--navy);
+  border: 1px solid var(--navy);
+}
+
+.result-card { scroll-margin-top: 70px; }
+.result-allclear {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--good);
+  background: var(--good-bg);
+  border-radius: 10px;
+  padding: 10px 12px;
+  margin-bottom: 12px;
+  text-align: center;
+}
+.result-title { font-size: 16px; margin-bottom: 8px; }
+.result-score { font-size: 26px; font-weight: 700; margin-bottom: 4px; }
+.result-score .pct { font-size: 14px; font-weight: 400; color: var(--ink-soft); margin-left: 6px; }
+.result-history { margin-top: 12px; display: flex; flex-direction: column; gap: 6px; }
+.result-history-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12.5px;
+  color: var(--ink-soft);
+  padding: 6px 10px;
+  background: var(--bg);
+  border-radius: 8px;
+}
+.result-history-row .round-label { font-weight: 700; color: var(--ink); }
+.result-actions { display: flex; flex-direction: column; gap: 8px; }
+.result-actions .next-btn { margin-top: 0; }
 
 .settings-toggle { font-size: 11px; color: var(--ink-soft); text-decoration: underline; cursor: pointer; background: none; border: none; font-family: inherit; padding: 0; margin-top: 10px; }
 .settings-panel { margin-top: 10px; padding: 12px; background: var(--paper); border-radius: 10px; display: flex; flex-direction: column; gap: 8px; }

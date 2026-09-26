@@ -46,8 +46,8 @@ function withTimeout(promise, ms, timeoutMessage) {
   };
   var currentSubjectFilter = "all";
   var currentYearFilter = "all";
-  var queue = [];
-  var queueIdx = 0;
+  var currentCountFilter = "10"; // "5" | "10" | "20" | "30" | "all"
+  var session = null;
   var answeredThisQuestion = false;
   var dashExpanded = false;
   var cloudRoomId = null;
@@ -69,14 +69,51 @@ function withTimeout(promise, ms, timeoutMessage) {
     return Object.keys(seen).map(Number).sort(function (a, b) { return b - a; });
   }
 
-  function buildQueue() {
-    var pool = QUESTIONS.filter(function (q) {
+  // 現在の科目・年度フィルタに該当する問題プール（順序は未シャッフル）。
+  function getFilteredPool() {
+    return QUESTIONS.filter(function (q) {
       var subjectOk = currentSubjectFilter === "all" || q.subject === currentSubjectFilter;
       var yearOk = currentYearFilter === "all" || q.year === currentYearFilter;
       return subjectOk && yearOk;
     });
-    queue = shuffle(pool);
-    queueIdx = 0;
+  }
+
+  // 問題数チップの候補（5/10/20/30）のうち、現在のプールに対して意味を
+  // 持つもの（プールの問題数未満のもの）だけを返す。「全問」は常に別途表示。
+  var COUNT_OPTIONS = [5, 10, 20, 30];
+  function getAvailableCountOptions(poolSize) {
+    return COUNT_OPTIONS.filter(function (n) { return n < poolSize; });
+  }
+
+  // ---------- セット演習（出題数を区切ったセッション・周回モード） ----------
+  // session の構造:
+  //   round        : 今何周目か（1周目は1）
+  //   allQuestions : 1周目に出題した「元の全問セット」（周を重ねても不変）
+  //   roundHistory : これまでの各周の {round, total, correct} の配列
+  //   questions    : 今の周で出題する問題配列（2周目以降は不正解だったものだけ）
+  //   index        : 今の周の中での出題位置
+  //   answers      : 今の周の解答記録 [{id, subject, correct}]
+  function startSession(questions, opts) {
+    opts = opts || {};
+    session = {
+      round: opts.round || 1,
+      allQuestions: opts.allQuestions || questions,
+      roundHistory: opts.roundHistory || [],
+      questions: questions,
+      index: 0,
+      answers: []
+    };
+  }
+
+  // 現在の科目・年度・問題数フィルタから、新しい1周目のセッションを開始する。
+  function startNewSession() {
+    var pool = getFilteredPool();
+    if (pool.length === 0) {
+      session = null;
+      return;
+    }
+    var n = currentCountFilter === "all" ? pool.length : Math.min(parseInt(currentCountFilter, 10), pool.length);
+    startSession(shuffle(pool).slice(0, n));
   }
 
   // ---------- localStorage 永続化 ----------
@@ -411,7 +448,7 @@ function withTimeout(promise, ms, timeoutMessage) {
         currentSubjectFilter = s.key;
         lsSet("shindanshi_subject_filter", currentSubjectFilter);
         renderChips();
-        buildQueue();
+        startNewSession();
         renderQuestion(true);
       });
       wrap.appendChild(chip);
@@ -433,13 +470,48 @@ function withTimeout(promise, ms, timeoutMessage) {
       chip.addEventListener("click", function () { setYearFilter(year); });
       yearWrap.appendChild(chip);
     });
+
+    renderCountChips();
   }
 
   function setYearFilter(year) {
     currentYearFilter = year;
     lsSet("shindanshi_year_filter", currentYearFilter);
     renderChips();
-    buildQueue();
+    startNewSession();
+    renderQuestion(true);
+  }
+
+  // ---------- 描画：問題数チップ ----------
+  function renderCountChips() {
+    var wrap = document.getElementById("countChips");
+    wrap.innerHTML = "";
+    var poolSize = getFilteredPool().length;
+    // プールが小さいと数値チップの選択が「全問」と同じ結果になることがある
+    // （例: プール8問に対して「10問」を選んでいる場合）。その場合は
+    // 見た目上も「全問」チップの方をアクティブとして扱う。
+    var isEffectivelyAll = currentCountFilter === "all" || parseInt(currentCountFilter, 10) >= poolSize;
+    getAvailableCountOptions(poolSize).forEach(function (n) {
+      var chip = document.createElement("button");
+      chip.className = "chip";
+      chip.textContent = n + "問";
+      chip.setAttribute("data-active", (!isEffectivelyAll && currentCountFilter === String(n)) ? "true" : "false");
+      chip.addEventListener("click", function () { setCountFilter(String(n)); });
+      wrap.appendChild(chip);
+    });
+    var allChip = document.createElement("button");
+    allChip.className = "chip";
+    allChip.textContent = "全問（" + poolSize + "問）";
+    allChip.setAttribute("data-active", isEffectivelyAll ? "true" : "false");
+    allChip.addEventListener("click", function () { setCountFilter("all"); });
+    wrap.appendChild(allChip);
+  }
+
+  function setCountFilter(count) {
+    currentCountFilter = count;
+    lsSet("shindanshi_count_filter", currentCountFilter);
+    renderCountChips();
+    startNewSession();
     renderQuestion(true);
   }
 
@@ -557,29 +629,39 @@ function withTimeout(promise, ms, timeoutMessage) {
     });
   }
 
+  // ---------- 表示切替：問題カード／結果カード ----------
+  function showQuizCard() {
+    document.getElementById("quizCard").hidden = false;
+    document.getElementById("resultCard").hidden = true;
+  }
+  function showResultCardEl() {
+    document.getElementById("quizCard").hidden = true;
+    document.getElementById("resultCard").hidden = false;
+  }
+
   // ---------- 描画：クイズ ----------
   // scrollTop: true の場合、描画後にカードの先頭までスクロールする。
   // 「次の問題へ」ボタンや科目・年度の切り替えなど、明示的に新しい問題へ
   // 移動したときだけ true を渡す（初回表示時にダッシュボード等を
   // 飛ばして問題までスクロールしてしまわないようにするため）。
   function renderQuestion(scrollTop) {
-    if (queue.length === 0) buildQueue();
-    var card = document.getElementById("qEmpty");
-    if (queue.length === 0) {
-      card.hidden = false;
+    if (!session) startNewSession();
+    showQuizCard();
+    var emptyEl = document.getElementById("qEmpty");
+    if (!session || session.questions.length === 0) {
+      emptyEl.hidden = false;
       document.getElementById("qText").innerHTML = "";
       document.getElementById("qChoices").innerHTML = "";
       document.getElementById("qFeedback").hidden = true;
       document.getElementById("qNext").hidden = true;
       return;
     }
-    card.hidden = true;
+    emptyEl.hidden = true;
     if (scrollTop) {
-      var quizCard = document.querySelector(".quiz-card");
+      var quizCard = document.getElementById("quizCard");
       if (quizCard) quizCard.scrollIntoView({ behavior: "smooth", block: "start" });
     }
-    if (queueIdx >= queue.length) queueIdx = 0;
-    var q = queue[queueIdx];
+    var q = session.questions[session.index];
     answeredThisQuestion = false;
 
     document.getElementById("qSubjectTag").textContent = q.subjectName;
@@ -589,7 +671,7 @@ function withTimeout(promise, ms, timeoutMessage) {
     } else {
       sourceTag.textContent = "オリジナル";
     }
-    document.getElementById("qProgress").textContent = (queueIdx + 1) + " / " + queue.length;
+    document.getElementById("qProgress").textContent = (session.index + 1) + " / " + session.questions.length;
     renderQuestionBody(document.getElementById("qText"), q);
 
     var keys = ["ア", "イ", "ウ", "エ", "オ"];
@@ -624,13 +706,79 @@ function withTimeout(promise, ms, timeoutMessage) {
     verdict.textContent = correct ? "正解" : "不正解";
     verdict.className = "verdict " + (correct ? "ok" : "ng");
     renderExplanation(document.getElementById("qExplanation"), q.explanation);
-    document.getElementById("qNext").hidden = false;
+    var nextBtn = document.getElementById("qNext");
+    nextBtn.hidden = false;
+    nextBtn.textContent = (session.index + 1 >= session.questions.length) ? "結果を見る" : "次の問題へ";
 
+    session.answers.push({ id: q.id, subject: q.subject, correct: correct });
     recordAnswer(activeUser, q.id, q.subject, correct);
 
     // スマホ等で問題文が長いと、解説がスクロールしないと見えない位置に
     // 描画されることがあるため、解答した瞬間に解説の先頭までスクロールする。
     fb.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  // ---------- 描画：結果画面 ----------
+  function renderResultScreen() {
+    var total = session.answers.length;
+    var correctCount = session.answers.filter(function (a) { return a.correct; }).length;
+    var wrongAnswers = session.answers.filter(function (a) { return !a.correct; });
+    var roundHistory = session.roundHistory.concat([{ round: session.round, total: total, correct: correctCount }]);
+    var isAllClear = session.round > 1 && wrongAnswers.length === 0;
+
+    showResultCardEl();
+    var resultCardEl = document.getElementById("resultCard");
+    if (resultCardEl) resultCardEl.scrollIntoView({ behavior: "smooth", block: "start" });
+
+    var allClearEl = document.getElementById("resultAllClear");
+    allClearEl.hidden = !isAllClear;
+
+    document.getElementById("resultTitle").textContent =
+      session.round > 1 ? session.round + "周目の結果" : "結果";
+
+    var pct = total ? Math.round((correctCount / total) * 100) : 0;
+    document.getElementById("resultScore").innerHTML =
+      correctCount + ' / ' + total + ' 問正解<span class="pct">（' + pct + '%）</span>';
+
+    var historyEl = document.getElementById("resultHistory");
+    historyEl.innerHTML = "";
+    if (roundHistory.length > 1) {
+      roundHistory.forEach(function (r) {
+        var row = document.createElement("div");
+        row.className = "result-history-row";
+        row.innerHTML =
+          '<span class="round-label">' + r.round + '周目</span>' +
+          '<span>' + r.correct + ' / ' + r.total + ' 問正解</span>';
+        historyEl.appendChild(row);
+      });
+    }
+
+    var retryBtn = document.getElementById("retryWrongBtn");
+    if (wrongAnswers.length > 0) {
+      retryBtn.hidden = false;
+      retryBtn.textContent = "間違えた問題だけを再挑戦（" + wrongAnswers.length + "問）";
+      retryBtn.onclick = function () {
+        var wrongQuestions = wrongAnswers
+          .map(function (a) { return QUESTIONS.filter(function (qq) { return qq.id === a.id; })[0]; })
+          .filter(Boolean);
+        startSession(shuffle(wrongQuestions), {
+          round: session.round + 1,
+          allQuestions: session.allQuestions,
+          roundHistory: roundHistory
+        });
+        renderQuestion(true);
+      };
+    } else {
+      retryBtn.hidden = true;
+      retryBtn.onclick = null;
+    }
+
+    var restartBtn = document.getElementById("restartAllBtn");
+    restartBtn.textContent = "最初からもう一度（全" + session.allQuestions.length + "問）";
+    restartBtn.onclick = function () {
+      startSession(shuffle(session.allQuestions.slice()));
+      renderQuestion(true);
+    };
   }
 
   function showSyncMsg(text, isErr) {
@@ -737,9 +885,12 @@ function withTimeout(promise, ms, timeoutMessage) {
   // ---------- イベント登録 ----------
   function bindEvents() {
     document.getElementById("qNext").addEventListener("click", function () {
-      queueIdx++;
-      if (queueIdx >= queue.length) buildQueue();
-      renderQuestion(true);
+      session.index++;
+      if (session.index >= session.questions.length) {
+        renderResultScreen();
+      } else {
+        renderQuestion(true);
+      }
     });
 
     document.getElementById("dashToggle").addEventListener("click", function () {
@@ -850,6 +1001,7 @@ function withTimeout(promise, ms, timeoutMessage) {
     dashExpanded = lsGet("shindanshi_dash_expanded", false);
     currentSubjectFilter = lsGet("shindanshi_subject_filter", "all");
     currentYearFilter = lsGet("shindanshi_year_filter", "all");
+    currentCountFilter = lsGet("shindanshi_count_filter", "10");
 
     loadNames();
     loadProgress();
@@ -859,7 +1011,7 @@ function withTimeout(promise, ms, timeoutMessage) {
     renderCompare();
     applyDashState();
     renderChips();
-    buildQueue();
+    startNewSession();
     renderQuestion();
     bindEvents();
     setupInstallBanner();

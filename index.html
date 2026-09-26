@@ -97,7 +97,10 @@
   <span class="eyebrow">年度を選ぶ</span>
   <div class="chips" id="yearChips"></div>
 
-  <div class="quiz-card">
+  <span class="eyebrow">問題数を選ぶ</span>
+  <div class="chips" id="countChips"></div>
+
+  <div class="quiz-card" id="quizCard">
     <div class="quiz-meta">
       <span class="tags">
         <span class="tag" id="qSubjectTag">経済学</span>
@@ -113,6 +116,17 @@
       <div class="exp" id="qExplanation"></div>
     </div>
     <button class="next-btn" id="qNext" hidden>次の問題へ</button>
+  </div>
+
+  <div class="quiz-card result-card" id="resultCard" hidden>
+    <div class="result-allclear" id="resultAllClear" hidden>&#127881; 全問正解しました！</div>
+    <h2 class="result-title" id="resultTitle">結果</h2>
+    <div class="result-score" id="resultScore"></div>
+    <div class="result-history" id="resultHistory"></div>
+    <div class="result-actions">
+      <button class="next-btn" id="retryWrongBtn" type="button" hidden></button>
+      <button class="next-btn secondary" id="restartAllBtn" type="button"></button>
+    </div>
   </div>
 </section>
 

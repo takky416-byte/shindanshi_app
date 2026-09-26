@@ -8,7 +8,7 @@
 - **ビルドレス・vanilla JS の静的PWA**。フレームワーク／バンドラなし。`index.html` を任意の静的ホスティング（GitHub Pages、Cloudflare Pages 等）にそのまま置けば動く。
 - `js/questions.js` … `js/data/pastexam/index.js`（過去問、2019〜2026年度×7科目）を統合するエントリーポイント。各設問に `source: "pastexam"` タグを持たせてある。過去問の取り込み手順は [`docs/pastexam-ingestion.md`](./docs/pastexam-ingestion.md) を参照。
 - `scripts/validate-questions.mjs` … 問題データの整合性チェック（`node scripts/validate-questions.mjs`）。過去問追加時は必ず実行する。
-- `js/app.js` … アプリ本体。ユーザー切り替え、クイズ進行（科目×年度フィルタ）、夫婦比較ダッシュボード、端末間同期、Service Worker登録、インストール導線を担当。
+- `js/app.js` … アプリ本体。ユーザー切り替え、クイズ進行（科目×年度×問題数フィルタで区切ったセット演習＋結果画面＋不正解のみ再挑戦する周回モード）、夫婦比較ダッシュボード、端末間同期、Service Worker登録、インストール導線を担当。
 - `js/cloud-sync.js` … Firebase（Firestore + 匿名認証）を使ったクラウド同期のI/O層。`app.js`からは動的import（`import()`）で読み込まれ、Firebase CDNに到達できない環境でもアプリ本体の起動を妨げないようにしている。
 - `manifest.webmanifest` / `sw.js` / `icons/` … PWA化（ホーム画面追加・オフライン利用）。`sw.js` はアプリシェルをキャッシュファーストで配信する。
 - 進捗データは基本的に **localStorage** に保存する（サインイン不要）。夫婦間の同期は2方式:
