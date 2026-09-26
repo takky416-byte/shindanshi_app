@@ -629,11 +629,60 @@ function withTimeout(promise, ms, timeoutMessage) {
     banner.hidden = false;
   }
 
+  // Service Workerの updatefound / statechange イベントに頼る更新検知は、
+  // ブラウザがナビゲーション時に自動で行う更新チェックと競合し、こちらの
+  // イベントリスナーが間に合わず取りこぼすことがある（実機・自動テストの
+  // 両方で確認済み）。より確実な方法として、js/version.js を毎回キャッシュ
+  // 無視で直接フェッチし、今読み込んでいるバージョンと食い違っていないかを
+  // 比較する方式にした。あわせて reg.update() も呼び、Service Worker側の
+  // キャッシュ自体も同じタイミングで新しい内容に更新しておく（そうしないと
+  // バナーの「更新する」を押してリロードしても、Service Workerがまだ古い
+  // キャッシュのままで実際には更新されない）。
+  var swRegistration = null;
+
+  function checkForNewVersion() {
+    if (swRegistration) swRegistration.update().catch(function () {});
+    var bustedUrl = "./version.js?t=" + Date.now();
+    import(bustedUrl).then(function (mod) {
+      if (mod.APP_VERSION && mod.APP_VERSION !== APP_VERSION) {
+        var banner = document.getElementById("updateBanner");
+        if (banner) banner.hidden = false;
+      }
+    }).catch(function () {});
+  }
+
   function registerServiceWorker() {
     if (!("serviceWorker" in navigator)) return;
     window.addEventListener("load", function () {
-      navigator.serviceWorker.register("./sw.js").catch(function () {});
+      navigator.serviceWorker.register("./sw.js").then(function (reg) {
+        swRegistration = reg;
+        reg.update().catch(function () {});
+      }).catch(function () {});
     });
+
+    checkForNewVersion();
+    document.addEventListener("visibilitychange", function () {
+      if (document.visibilityState === "visible") checkForNewVersion();
+    });
+
+    var updateBtn = document.getElementById("updateReloadBtn");
+    if (updateBtn) {
+      updateBtn.addEventListener("click", function () {
+        // SWは install 時に skipWaiting() するため「waiting」状態を経由せず、
+        // 新しいSWが実際にactivateしてcontrollerを乗っ取る(controllerchange)まで
+        // 待ってからリロードしないと、古いキャッシュのままリロードしてしまう。
+        // 万が一controllerchangeが検知できなくても、最大3秒待てば必ずリロードする。
+        var reloaded = false;
+        function doReload() {
+          if (reloaded) return;
+          reloaded = true;
+          location.reload();
+        }
+        navigator.serviceWorker.addEventListener("controllerchange", doReload, { once: true });
+        if (swRegistration) swRegistration.update().catch(function () {});
+        setTimeout(doReload, 3000);
+      });
+    }
   }
 
   // ---------- イベント登録 ----------
