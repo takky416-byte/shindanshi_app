@@ -312,7 +312,7 @@ export const LAW_2023_QUESTIONS = [
     year: 2023,
     questionNumber: "16(設問1)",
     blocks: [
-      { type: "p", text: "以下の会話は、Ｘ株式会社の代表取締役である甲氏と、中小企業診断士であるあなたとの間で行われたものである。この会話を読んで、下記の設問に答えよ。\n\n甲氏：「弊社は、米国ニューヨーク市に本拠を置くＹ社から商品を輸入し、国内で販売しようと考えています。それに当たって、Ｙ社から届いた契約書案を検討しているのですが、以下の条項はどのような内容でしょうか。」\n1. 本契約は、抵触法の原則によらず、アメリカ合衆国ニューヨーク州法に準拠し、同法に従って解釈されるものとする。\n2. 本契約から、又は本契約に関連して発生する、その存在、有効性又は終了に関する問題を含むすべての紛争は、米国仲裁協会の仲裁規則に従い、米国仲裁協会によりニューヨーク市における仲裁に付託され、最終的に解決されるものとする。\nあなた：「1項は　Ａ　を定めており、2項は　Ｂ　を規定しております。御社は日本でＹ社から輸入した商品を販売されるとのことですので、準拠法は日本法で提案するのはいかがでしょうか。」\n\n（設問1）\n会話の中の空欄ＡとＢに入る記述として、最も適切なものはどれか。" }
+      { type: "p", text: "以下の会話は、Ｘ株式会社の代表取締役である甲氏と、中小企業診断士であるあなたとの間で行われたものである。この会話を読んで、下記の設問に答えよ。\n\n甲氏：「弊社は、米国ニューヨーク市に本拠を置くＹ社から商品を輸入し、国内で販売しようと考えています。それに当たって、Ｙ社から届いた契約書案を検討しているのですが、以下の条項はどのような内容でしょうか。」\n1. This Agreement shall be governed by and construed in accordance with the laws of the state of New York, the United States of America, without reference to conflict of laws principle.\n2. All dispute arising out of or in connection with this Agreement, including any question regarding its existence, validity or termination, shall be referred to and finally resolved by arbitration in New York City, New York, the United States of America by the American Arbitration Association in accordance with the Arbitration Rules of the American Arbitration Association.\nあなた：「1項は　Ａ　を定めており、2項は　Ｂ　を規定しております。御社は日本でＹ社から輸入した商品を販売されるとのことですので、準拠法は日本法で提案するのはいかがでしょうか。」\n\n（設問1）\n会話の中の空欄ＡとＢに入る記述として、最も適切なものはどれか。" }
     ],
     choices: [
       "Ａ：本契約がアメリカ合衆国ニューヨーク州法に準拠し、同法に従って解釈されること\nＢ：本契約から、または本契約に関連して発生するすべての紛争はニューヨーク市における米国仲裁協会による仲裁に付託され、最終的に解決されること",
