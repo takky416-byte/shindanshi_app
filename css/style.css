@@ -88,13 +88,15 @@ header.top {
   margin-bottom: 14px;
   border-bottom: 1px solid var(--line);
   display: flex;
-  align-items: baseline;
+  align-items: center;
   justify-content: space-between;
   gap: 8px;
 }
-header.top .brand { display: flex; align-items: baseline; gap: 8px; }
-header.top h1 { font-size: 19px; letter-spacing: .02em; color: var(--navy); }
+header.top .brand { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+header.top h1 { font-size: 19px; letter-spacing: .02em; color: var(--navy); white-space: nowrap; }
+header.top .brand-meta { display: flex; align-items: baseline; gap: 6px; flex-wrap: wrap; }
 header.top .sub { font-size: 11px; color: var(--ink-soft); letter-spacing: .04em; }
+header.top .version { font-size: 9.5px; color: var(--ink-soft); opacity: .6; letter-spacing: .02em; white-space: nowrap; }
 
 .userbar { display: flex; gap: 6px; }
 .user-btn {

@@ -1,4 +1,5 @@
 import { QUESTIONS, SUBJECTS } from "./questions.js";
+import { APP_VERSION, APP_UPDATED } from "./version.js";
 
 // cloud-sync.js はFirebase SDK（外部CDN）を静的importしているため、ここで
 // 静的importすると、CDNに到達できない環境（電波不良・企業ネットワーク等）で
@@ -744,6 +745,9 @@ function withTimeout(promise, ms, timeoutMessage) {
 
   // ---------- 起動 ----------
   function start() {
+    var versionEl = document.getElementById("appVersion");
+    if (versionEl) versionEl.textContent = APP_VERSION + " ・ " + APP_UPDATED;
+
     activeUser = lsGet("shindanshi_active_user", "husband");
     dashExpanded = lsGet("shindanshi_dash_expanded", false);
     currentSubjectFilter = lsGet("shindanshi_subject_filter", "all");
