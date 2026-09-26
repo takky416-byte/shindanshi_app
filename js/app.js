@@ -533,7 +533,8 @@ function withTimeout(promise, ms, timeoutMessage) {
   function renderUserbar() {
     var bar = document.getElementById("userbar");
     bar.innerHTML = "";
-    ["husband", "wife"].forEach(function (id) {
+    // 今回の受験の主役は妻なので、妻のボタンを左（先）に置く。
+    ["wife", "husband"].forEach(function (id) {
       var btn = document.createElement("button");
       btn.className = "user-btn " + (id === "husband" ? "h" : "w");
       btn.textContent = names[id];
@@ -542,6 +543,7 @@ function withTimeout(promise, ms, timeoutMessage) {
         activeUser = id;
         lsSet("shindanshi_active_user", activeUser);
         renderUserbar();
+        renderCompare();
       });
       bar.appendChild(btn);
     });
@@ -559,7 +561,10 @@ function withTimeout(promise, ms, timeoutMessage) {
 
     var grid = document.getElementById("compareGrid");
     grid.innerHTML = "";
-    [["husband", sh, names.husband], ["wife", sw, names.wife]].forEach(function (pair) {
+    // 選んでいる本人の成績を左側（先頭）に表示する。
+    var pairs = [["husband", sh, names.husband], ["wife", sw, names.wife]];
+    if (activeUser === "wife") pairs.reverse();
+    pairs.forEach(function (pair) {
       var id = pair[0], s = pair[1], label = pair[2];
       var leader = (id === "husband" && sh.total >= sw.total && sh.total > 0) || (id === "wife" && sw.total > sh.total);
       var card = document.createElement("div");

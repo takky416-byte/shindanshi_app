@@ -13,10 +13,10 @@
   --good-bg: #E4F2E9;
   --bad: #B54A3A;
   --bad-bg: #F7E7E2;
-  --husband: #29443C;
-  --husband-bg: #E1E9E3;
-  --wife: #A3572B;
-  --wife-bg: #F5E5D6;
+  --husband: #3B5B78;
+  --husband-bg: #DEE6EC;
+  --wife: #8B3A42;
+  --wife-bg: #F3DEE0;
   --shadow: 0 1px 2px rgba(31,42,36,.06), 0 6px 16px rgba(31,42,36,.06);
   --radius: 14px;
 }
@@ -36,10 +36,10 @@
     --good-bg: #203A2C;
     --bad: #E08874;
     --bad-bg: #3B2723;
-    --husband: #7FA694;
-    --husband-bg: #223229;
-    --wife: #E0A46C;
-    --wife-bg: #3A2C1E;
+    --husband: #8FB4CE;
+    --husband-bg: #1F2E38;
+    --wife: #E0919A;
+    --wife-bg: #3A252A;
     --shadow: 0 1px 2px rgba(0,0,0,.3), 0 6px 20px rgba(0,0,0,.35);
   }
 }
@@ -58,10 +58,10 @@
   --good-bg: #203A2C;
   --bad: #E08874;
   --bad-bg: #3B2723;
-  --husband: #7FA694;
-  --husband-bg: #223229;
-  --wife: #E0A46C;
-  --wife-bg: #3A2C1E;
+  --husband: #8FB4CE;
+  --husband-bg: #1F2E38;
+  --wife: #E0919A;
+  --wife-bg: #3A252A;
   --shadow: 0 1px 2px rgba(0,0,0,.3), 0 6px 20px rgba(0,0,0,.35);
 }
 
