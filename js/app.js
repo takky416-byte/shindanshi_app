@@ -412,7 +412,7 @@ function withTimeout(promise, ms, timeoutMessage) {
         lsSet("shindanshi_subject_filter", currentSubjectFilter);
         renderChips();
         buildQueue();
-        renderQuestion();
+        renderQuestion(true);
       });
       wrap.appendChild(chip);
     });
@@ -440,7 +440,44 @@ function withTimeout(promise, ms, timeoutMessage) {
     lsSet("shindanshi_year_filter", currentYearFilter);
     renderChips();
     buildQueue();
-    renderQuestion();
+    renderQuestion(true);
+  }
+
+  // 解説文（例:「エが正しい。アは〜のため誤り。イは〜のため誤り。」）を、
+  // 選択肢（ア/イ/ウ/エ/オ）ごとに改行して段落として表示するための分割処理。
+  // 「アは」のように助詞が続くとは限らない（例:「イの管理図は〜」）ため、
+  // 文の先頭1文字が選択肢の文字かどうかだけで判定する。
+  var CHOICE_STARTS = { ア: true, イ: true, ウ: true, エ: true, オ: true };
+  function splitExplanation(text) {
+    if (!text) return [];
+    var rawSentences = text.split("。");
+    var sentences = [];
+    rawSentences.forEach(function (s, i) {
+      if (s === "") return;
+      sentences.push(i < rawSentences.length - 1 ? s + "。" : s);
+    });
+    var paragraphs = [];
+    var current = "";
+    sentences.forEach(function (s) {
+      if (CHOICE_STARTS[s.charAt(0)] && current) {
+        paragraphs.push(current);
+        current = s;
+      } else {
+        current += s;
+      }
+    });
+    if (current) paragraphs.push(current);
+    return paragraphs.length > 0 ? paragraphs : [text];
+  }
+
+  function renderExplanation(container, text) {
+    container.innerHTML = "";
+    splitExplanation(text).forEach(function (p) {
+      var line = document.createElement("p");
+      line.className = "explanation-line";
+      line.textContent = p;
+      container.appendChild(line);
+    });
   }
 
   // 設問本文の描画。通常は text（プレーンテキスト、改行はそのまま保持）だが、
@@ -521,7 +558,11 @@ function withTimeout(promise, ms, timeoutMessage) {
   }
 
   // ---------- 描画：クイズ ----------
-  function renderQuestion() {
+  // scrollTop: true の場合、描画後にカードの先頭までスクロールする。
+  // 「次の問題へ」ボタンや科目・年度の切り替えなど、明示的に新しい問題へ
+  // 移動したときだけ true を渡す（初回表示時にダッシュボード等を
+  // 飛ばして問題までスクロールしてしまわないようにするため）。
+  function renderQuestion(scrollTop) {
     if (queue.length === 0) buildQueue();
     var card = document.getElementById("qEmpty");
     if (queue.length === 0) {
@@ -533,6 +574,10 @@ function withTimeout(promise, ms, timeoutMessage) {
       return;
     }
     card.hidden = true;
+    if (scrollTop) {
+      var quizCard = document.querySelector(".quiz-card");
+      if (quizCard) quizCard.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
     if (queueIdx >= queue.length) queueIdx = 0;
     var q = queue[queueIdx];
     answeredThisQuestion = false;
@@ -578,10 +623,14 @@ function withTimeout(promise, ms, timeoutMessage) {
     var verdict = document.getElementById("qVerdict");
     verdict.textContent = correct ? "正解" : "不正解";
     verdict.className = "verdict " + (correct ? "ok" : "ng");
-    document.getElementById("qExplanation").textContent = q.explanation;
+    renderExplanation(document.getElementById("qExplanation"), q.explanation);
     document.getElementById("qNext").hidden = false;
 
     recordAnswer(activeUser, q.id, q.subject, correct);
+
+    // スマホ等で問題文が長いと、解説がスクロールしないと見えない位置に
+    // 描画されることがあるため、解答した瞬間に解説の先頭までスクロールする。
+    fb.scrollIntoView({ behavior: "smooth", block: "start" });
   }
 
   function showSyncMsg(text, isErr) {
@@ -690,7 +739,7 @@ function withTimeout(promise, ms, timeoutMessage) {
     document.getElementById("qNext").addEventListener("click", function () {
       queueIdx++;
       if (queueIdx >= queue.length) buildQueue();
-      renderQuestion();
+      renderQuestion(true);
     });
 
     document.getElementById("dashToggle").addEventListener("click", function () {

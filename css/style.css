@@ -204,6 +204,7 @@ section { margin-bottom: 22px; }
   border-radius: var(--radius);
   box-shadow: var(--shadow);
   padding: 18px;
+  scroll-margin-top: 70px;
 }
 .quiz-meta { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; gap: 8px; }
 .quiz-meta .tags { display: flex; gap: 6px; align-items: center; }
@@ -264,11 +265,13 @@ section { margin-bottom: 22px; }
 .choice-btn.wrong { background: var(--bad-bg); border-color: var(--bad); }
 .choice-btn.wrong .key { color: var(--bad); }
 
-.feedback { margin-top: 14px; padding-top: 14px; border-top: 1px dashed var(--line); }
+.feedback { margin-top: 14px; padding-top: 14px; border-top: 1px dashed var(--line); scroll-margin-top: 70px; }
 .feedback .verdict { font-family: "Shippori Mincho", serif; font-size: 16px; font-weight: 700; margin-bottom: 6px; }
 .feedback .verdict.ok { color: var(--good); }
 .feedback .verdict.ng { color: var(--bad); }
 .feedback .exp { font-size: 13px; line-height: 1.7; color: var(--ink-soft); }
+.feedback .exp .explanation-line { margin: 0 0 8px; }
+.feedback .exp .explanation-line:last-child { margin-bottom: 0; }
 .next-btn {
   margin-top: 14px;
   width: 100%;
