@@ -1,5 +1,22 @@
 import { QUESTIONS, SUBJECTS } from "./questions.js";
 
+// cloud-sync.js はFirebase SDK（外部CDN）を静的importしているため、ここで
+// 静的importすると、CDNに到達できない環境（電波不良・企業ネットワーク等）で
+// アプリ全体が起動しなくなってしまう。クラウド同期が実際に必要になった
+// タイミングで動的importし、失敗してもクイズ本体の動作には影響しないようにする。
+var cloudSyncModule = null;
+var cloudSyncModulePromise = null;
+function loadCloudSyncModule() {
+  if (cloudSyncModule) return Promise.resolve(cloudSyncModule);
+  if (!cloudSyncModulePromise) {
+    cloudSyncModulePromise = import("./cloud-sync.js").then(function (mod) {
+      cloudSyncModule = mod;
+      return mod;
+    });
+  }
+  return cloudSyncModulePromise;
+}
+
 (function () {
   "use strict";
 
@@ -16,6 +33,7 @@ import { QUESTIONS, SUBJECTS } from "./questions.js";
   var queueIdx = 0;
   var answeredThisQuestion = false;
   var dashExpanded = false;
+  var cloudRoomId = null;
 
   function shuffle(arr) {
     var a = arr.slice();
@@ -166,6 +184,80 @@ import { QUESTIONS, SUBJECTS } from "./questions.js";
     p.updatedAt = Date.now();
     lsSet("shindanshi_progress_" + userId, p);
     renderCompare();
+    pushCloudProgress();
+  }
+
+  // ---------- クラウド同期（Firebase、ペアコードによるリアルタイム同期） ----------
+  function setCloudMsg(text, isErr) {
+    var el = document.getElementById("cloudSyncMsg");
+    if (!el) return;
+    el.textContent = text;
+    el.className = "sync-msg" + (isErr ? " err" : "");
+  }
+
+  function applyIncomingRoomData(data) {
+    if (!data || typeof data !== "object") return;
+    progress.husband = mergeProgress(progress.husband, data.husband);
+    progress.wife = mergeProgress(progress.wife, data.wife);
+    lsSet("shindanshi_progress_husband", progress.husband);
+    lsSet("shindanshi_progress_wife", progress.wife);
+    if (data.names) {
+      if (data.names.husband) names.husband = data.names.husband;
+      if (data.names.wife) names.wife = data.names.wife;
+      lsSet("shindanshi_name_h", names.husband);
+      lsSet("shindanshi_name_w", names.wife);
+    }
+    renderUserbar();
+    renderCompare();
+  }
+
+  function pushCloudProgress() {
+    if (!cloudRoomId) return;
+    loadCloudSyncModule().then(function (mod) {
+      return mod.pushRoomData(cloudRoomId, {
+        names: { husband: names.husband, wife: names.wife },
+        husband: progress.husband,
+        wife: progress.wife
+      });
+    }).catch(function () {
+      setCloudMsg("同期に失敗しました。電波状況を確認してもう一度お試しください。", true);
+    });
+  }
+
+  function connectCloudRoom(rawCode, isResume) {
+    loadCloudSyncModule().then(function (mod) {
+      var roomId = mod.sanitizeRoomCode(rawCode);
+      if (!roomId) {
+        setCloudMsg("ペアコードを入力してください。", true);
+        return;
+      }
+      cloudRoomId = roomId;
+      lsSet("shindanshi_room_code", roomId);
+      if (!isResume) setCloudMsg("接続中…", false);
+      mod.subscribeRoom(
+        roomId,
+        function (data) {
+          applyIncomingRoomData(data);
+          setCloudMsg("同期しています（ペアコード: " + roomId + "）", false);
+        },
+        function () {
+          setCloudMsg("エラー：接続できませんでした。ペアコードや通信環境を確認してください。", true);
+        }
+      ).then(function () {
+        pushCloudProgress();
+      }).catch(function () {
+        setCloudMsg("エラー：接続できませんでした。ペアコードや通信環境を確認してください。", true);
+      });
+    }).catch(function () {
+      setCloudMsg("クラウド同期の読み込みに失敗しました。通信環境を確認してもう一度お試しください（この端末単体でのご利用は引き続き可能です）。", true);
+    });
+  }
+
+  function disconnectCloudRoom() {
+    if (cloudSyncModule) cloudSyncModule.unsubscribeRoomListener();
+    cloudRoomId = null;
+    lsSet("shindanshi_room_code", "");
+    setCloudMsg("クラウド同期を停止しました（この端末のデータはそのまま残ります）", false);
   }
 
   // ---------- 集計 ----------
@@ -528,6 +620,7 @@ import { QUESTIONS, SUBJECTS } from "./questions.js";
       if (!panel.hidden) {
         document.getElementById("nameH").value = names.husband;
         document.getElementById("nameW").value = names.wife;
+        document.getElementById("roomCodeInput").value = cloudRoomId || "";
       }
     });
 
@@ -538,6 +631,17 @@ import { QUESTIONS, SUBJECTS } from "./questions.js";
       renderUserbar();
       renderCompare();
       document.getElementById("settingsPanel").hidden = true;
+      pushCloudProgress();
+    });
+
+    document.getElementById("cloudConnect").addEventListener("click", function () {
+      var code = document.getElementById("roomCodeInput").value;
+      connectCloudRoom(code, false);
+    });
+
+    document.getElementById("cloudDisconnect").addEventListener("click", function () {
+      disconnectCloudRoom();
+      document.getElementById("roomCodeInput").value = "";
     });
 
     document.getElementById("syncExport").addEventListener("click", function () {
@@ -629,6 +733,9 @@ import { QUESTIONS, SUBJECTS } from "./questions.js";
     document.getElementById("syncAppliedDismiss").addEventListener("click", function () {
       document.getElementById("syncAppliedBanner").hidden = true;
     });
+
+    var savedRoomCode = lsGet("shindanshi_room_code", "");
+    if (savedRoomCode) connectCloudRoom(savedRoomCode, true);
   }
 
   if (document.readyState === "loading") {

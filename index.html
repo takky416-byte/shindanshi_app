@@ -55,7 +55,19 @@
     <button id="saveNames">保存</button>
 
     <div class="sync-block">
-      <span class="sync-label">端末間で進捗を同期する（サインイン不要）<br>「リンクで送る」→LINE等で相手に送る→相手がリンクをタップするだけで進捗が統合されます。</span>
+      <span class="sync-label">クラウド同期（推奨）<br>夫婦で同じ「ペアコード」を入力すると、以降は自動でリアルタイムに進捗が共有されます。ペアコードは他人に推測されにくい文字列にしてください。</span>
+      <div class="sync-row">
+        <input id="roomCodeInput" type="text" maxlength="60" placeholder="ペアコード（例: 好きな合言葉）">
+      </div>
+      <div class="sync-row">
+        <button id="cloudConnect" type="button">接続する</button>
+        <button id="cloudDisconnect" type="button">切断する</button>
+      </div>
+      <div class="sync-msg" id="cloudSyncMsg"></div>
+    </div>
+
+    <div class="sync-block">
+      <span class="sync-label">手動での同期（クラウド同期を使わない場合）<br>「リンクで送る」→LINE等で相手に送る→相手がリンクをタップするだけで進捗が統合されます。</span>
       <div class="sync-row">
         <button id="syncShareLink" type="button">リンクで送る</button>
         <button id="syncExport" type="button">コードを作成（手動貼り付け用）</button>
