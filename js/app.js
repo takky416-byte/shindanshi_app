@@ -51,6 +51,10 @@ function withTimeout(promise, ms, timeoutMessage) {
   var answeredThisQuestion = false;
   var dashExpanded = false;
   var cloudRoomId = null;
+  // 試験日は夫婦で共有する単一の値。複数端末での食い違いは
+  // 更新時刻（examDateUpdatedAt）による最終更新優先（last-write-wins）で解決する。
+  var examDate = "";
+  var examDateUpdatedAt = 0;
 
   function shuffle(arr) {
     var a = arr.slice();
@@ -146,6 +150,29 @@ function withTimeout(promise, ms, timeoutMessage) {
     progress.wife = lsGet("shindanshi_progress_wife", { answered: [], updatedAt: 0 });
   }
 
+  function loadExamDate() {
+    examDate = lsGet("shindanshi_exam_date", "");
+    examDateUpdatedAt = lsGet("shindanshi_exam_date_updated_at", 0);
+  }
+
+  // 片方の端末で試験日を設定・変更したら、もう片方にも同期させる。
+  function setExamDate(value) {
+    examDate = value || "";
+    examDateUpdatedAt = Date.now();
+    lsSet("shindanshi_exam_date", examDate);
+    lsSet("shindanshi_exam_date_updated_at", examDateUpdatedAt);
+  }
+
+  // 同期（クラウド／同期コード）で届いた試験日を取り込む。更新時刻が
+  // ローカルより新しい場合のみ採用する（最終更新優先）。
+  function applyIncomingExamDate(incomingDate, incomingUpdatedAt) {
+    if (typeof incomingUpdatedAt !== "number" || incomingUpdatedAt <= examDateUpdatedAt) return;
+    examDate = incomingDate || "";
+    examDateUpdatedAt = incomingUpdatedAt;
+    lsSet("shindanshi_exam_date", examDate);
+    lsSet("shindanshi_exam_date_updated_at", examDateUpdatedAt);
+  }
+
   // ---------- 同期コード（サインイン不要の端末間同期） ----------
   function b64EncodeUnicode(str) {
     return btoa(encodeURIComponent(str).replace(/%([0-9A-F]{2})/g, function (m, p1) {
@@ -182,7 +209,9 @@ function withTimeout(promise, ms, timeoutMessage) {
       v: 1,
       names: { husband: names.husband, wife: names.wife },
       husband: progress.husband,
-      wife: progress.wife
+      wife: progress.wife,
+      examDate: examDate,
+      examDateUpdatedAt: examDateUpdatedAt
     };
     return b64EncodeUnicode(JSON.stringify(payload));
   }
@@ -209,6 +238,7 @@ function withTimeout(promise, ms, timeoutMessage) {
       lsSet("shindanshi_name_h", names.husband);
       lsSet("shindanshi_name_w", names.wife);
     }
+    applyIncomingExamDate(payload.examDate, payload.examDateUpdatedAt);
   }
 
   // ページ読み込み時にURLハッシュに #sync=... が付いていれば自動で取り込む。
@@ -261,6 +291,7 @@ function withTimeout(promise, ms, timeoutMessage) {
       lsSet("shindanshi_name_h", names.husband);
       lsSet("shindanshi_name_w", names.wife);
     }
+    applyIncomingExamDate(data.examDate, data.examDateUpdatedAt);
     renderUserbar();
     renderCompare();
   }
@@ -275,7 +306,9 @@ function withTimeout(promise, ms, timeoutMessage) {
         return mod.pushRoomData(cloudRoomId, {
           names: { husband: names.husband, wife: names.wife },
           husband: progress.husband,
-          wife: progress.wife
+          wife: progress.wife,
+          examDate: examDate,
+          examDateUpdatedAt: examDateUpdatedAt
         });
       }),
       CLOUD_TIMEOUT_MS,
@@ -693,7 +726,6 @@ function withTimeout(promise, ms, timeoutMessage) {
   function renderPaceCard() {
     var card = document.getElementById("paceCard");
     if (!card) return;
-    var examDate = lsGet("shindanshi_exam_date", "");
     if (!examDate) {
       card.innerHTML = '<div class="pace-empty">設定画面で試験日を登録すると、目標ペースが表示されます。</div>';
       return;
@@ -1211,7 +1243,7 @@ function withTimeout(promise, ms, timeoutMessage) {
         document.getElementById("nameH").value = names.husband;
         document.getElementById("nameW").value = names.wife;
         document.getElementById("roomCodeInput").value = cloudRoomId || "";
-        document.getElementById("examDateInput").value = lsGet("shindanshi_exam_date", "");
+        document.getElementById("examDateInput").value = examDate;
       }
     });
 
@@ -1219,7 +1251,7 @@ function withTimeout(promise, ms, timeoutMessage) {
       var h = document.getElementById("nameH").value.trim();
       var w = document.getElementById("nameW").value.trim();
       saveNames(h, w);
-      lsSet("shindanshi_exam_date", document.getElementById("examDateInput").value);
+      setExamDate(document.getElementById("examDateInput").value);
       renderUserbar();
       renderCompare();
       document.getElementById("settingsPanel").hidden = true;
@@ -1313,6 +1345,7 @@ function withTimeout(promise, ms, timeoutMessage) {
 
     loadNames();
     loadProgress();
+    loadExamDate();
     var syncApplied = applyIncomingSyncFromUrl();
 
     renderUserbar();
