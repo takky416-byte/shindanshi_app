@@ -17,6 +17,10 @@ import {
   onSnapshot,
   enableIndexedDbPersistence
 } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
+import {
+  getMessaging,
+  getToken
+} from "https://www.gstatic.com/firebasejs/12.19.0/firebase-messaging.js";
 
 // Firebaseコンソール（プロジェクト設定 > 全般 > マイアプリ）で発行される値。
 // apiKey等はFirebaseの仕様上クライアントサイドに公開される前提の値であり、
@@ -29,6 +33,13 @@ const firebaseConfig = {
   messagingSenderId: "547968987992",
   appId: "1:547968987992:web:bdbb83aba1cf53962c2b2d"
 };
+
+// プッシュ通知（Web Push / FCM）用のVAPID公開鍵。
+// Firebaseコンソール → プロジェクトの設定 → Cloud Messaging →
+// 「ウェブ構成」→「ウェブプッシュ証明書」で鍵ペアを生成し、
+// その「キーペア」の値をここに設定すること（未設定のままだと通知の
+// 有効化がエラーになる）。
+const VAPID_PUBLIC_KEY = "REPLACE_WITH_FIREBASE_CONSOLE_VAPID_KEY";
 
 var app = null;
 var auth = null;
@@ -103,5 +114,23 @@ export function pushRoomData(roomId, data) {
   return ensureSignedIn().then(function () {
     var ref = doc(db, "rooms", roomId);
     return setDoc(ref, data, { merge: true });
+  });
+}
+
+// プッシュ通知の購読トークンを取得する。呼び出し側で通知許可
+// （Notification.requestPermission）を得た後に呼ぶこと。
+// swRegistration には navigator.serviceWorker.ready で得た登録を渡す
+// （push/notificationclickの実処理は sw.js 側に実装済み）。
+export function requestPushToken(swRegistration) {
+  if (VAPID_PUBLIC_KEY.indexOf("REPLACE_WITH") === 0) {
+    return Promise.reject(new Error("VAPID_PUBLIC_KEY未設定"));
+  }
+  ensureInit();
+  return ensureSignedIn().then(function () {
+    var messaging = getMessaging(app);
+    return getToken(messaging, {
+      vapidKey: VAPID_PUBLIC_KEY,
+      serviceWorkerRegistration: swRegistration
+    });
   });
 }

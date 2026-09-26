@@ -366,6 +366,48 @@ function withTimeout(promise, ms, timeoutMessage) {
     setCloudMsg("クラウド同期を停止しました（この端末のデータはそのまま残ります）", false);
   }
 
+  // ---------- プッシュ通知の有効化 ----------
+  function setPushMsg(text, isErr) {
+    var el = document.getElementById("pushMsg");
+    if (!el) return;
+    el.textContent = text;
+    el.className = "sync-msg" + (isErr ? " err" : "");
+  }
+
+  function enablePushNotifications() {
+    if (!cloudRoomId) {
+      setPushMsg("先にクラウド同期でペアコードに接続してください。", true);
+      return;
+    }
+    if (!("Notification" in window) || !("serviceWorker" in navigator) || !("PushManager" in window)) {
+      setPushMsg("この端末・ブラウザは通知に対応していません。", true);
+      return;
+    }
+    setPushMsg("通知を有効化しています…", false);
+    Notification.requestPermission().then(function (permission) {
+      if (permission !== "granted") {
+        setPushMsg("通知が許可されませんでした。ブラウザの設定から許可してください。", true);
+        return;
+      }
+      withTimeout(navigator.serviceWorker.ready, CLOUD_TIMEOUT_MS, CLOUD_TIMEOUT_MSG).then(function (reg) {
+        return withTimeout(loadCloudSyncModule(), CLOUD_TIMEOUT_MS, CLOUD_TIMEOUT_MSG).then(function (mod) {
+          return withTimeout(mod.requestPushToken(reg), CLOUD_TIMEOUT_MS, CLOUD_TIMEOUT_MSG);
+        });
+      }).then(function (token) {
+        if (!token) throw new Error("no token");
+        var tokens = {};
+        tokens[activeUser] = { token: token, updatedAt: Date.now() };
+        return loadCloudSyncModule().then(function (mod) {
+          return mod.pushRoomData(cloudRoomId, { pushTokens: tokens });
+        });
+      }).then(function () {
+        setPushMsg(names[activeUser] + "さんの端末として通知を有効にしました。", false);
+      }).catch(function (err) {
+        setPushMsg(err && err.message === CLOUD_TIMEOUT_MSG ? CLOUD_TIMEOUT_MSG : "通知の設定に失敗しました。通信環境を確認してもう一度お試しください。", true);
+      });
+    });
+  }
+
   // ---------- 集計 ----------
   function stats(userId) {
     var answered = progress[userId].answered || [];
@@ -1267,6 +1309,8 @@ function withTimeout(promise, ms, timeoutMessage) {
       disconnectCloudRoom();
       document.getElementById("roomCodeInput").value = "";
     });
+
+    document.getElementById("pushEnable").addEventListener("click", enablePushNotifications);
 
     document.getElementById("syncExport").addEventListener("click", function () {
       var code = buildSyncCode();

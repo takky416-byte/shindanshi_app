@@ -2,7 +2,7 @@
 // キャッシュ内容を更新した際は CACHE_NAME のバージョンを上げること
 // （合わせて js/version.js の APP_VERSION / APP_UPDATED も更新し、
 // 画面右上の表示からデプロイが反映されたかを確認できるようにする）。
-const CACHE_NAME = "shindanshi-shell-v15";
+const CACHE_NAME = "shindanshi-shell-v16";
 const PRECACHE_URLS = [
   "./",
   "./index.html",
@@ -45,6 +45,43 @@ self.addEventListener("activate", (event) => {
         keys.filter((key) => key !== CACHE_NAME).map((key) => caches.delete(key))
       ))
       .then(() => self.clients.claim())
+  );
+});
+
+// プッシュ通知（Cloud Functions からのFCM webpush配信）。
+// title/body のみをJSONで送ってもらい、アイコンや遷移先はこの端末での
+// 実際のデプロイパス（self.registration.scope）から組み立てる。
+self.addEventListener("push", (event) => {
+  var payload = {};
+  try {
+    var raw = event.data ? event.data.json() : {};
+    payload = raw && raw.data ? raw.data : raw;
+  } catch (e) {
+    // ペイロードがJSONでない場合は本文なしで通知だけ出す
+  }
+  var title = payload.title || "診断士ジム";
+  var body = payload.body || "";
+  var scope = self.registration.scope;
+  event.waitUntil(
+    self.registration.showNotification(title, {
+      body: body,
+      icon: new URL("icons/icon-192.png", scope).toString(),
+      badge: new URL("icons/icon-192.png", scope).toString(),
+      data: { url: scope }
+    })
+  );
+});
+
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  var url = (event.notification.data && event.notification.data.url) || self.registration.scope;
+  event.waitUntil(
+    clients.matchAll({ type: "window", includeUncontrolled: true }).then((list) => {
+      for (const c of list) {
+        if ("focus" in c) return c.focus();
+      }
+      if (clients.openWindow) return clients.openWindow(url);
+    })
   );
 });
 
