@@ -346,6 +346,7 @@ function withTimeout(promise, ms, timeoutMessage) {
         CLOUD_TIMEOUT_MSG
       ).then(function () {
         pushCloudProgress();
+        silentlyRefreshPushToken();
       }).catch(function (err) {
         setCloudMsg(err && err.message === CLOUD_TIMEOUT_MSG ? CLOUD_TIMEOUT_MSG : "エラー：接続できませんでした。ペアコードや通信環境を確認してください。", true);
       });
@@ -367,11 +368,67 @@ function withTimeout(promise, ms, timeoutMessage) {
   }
 
   // ---------- プッシュ通知の有効化 ----------
+  // ブラウザの通知許可(Notification.permission)自体は端末に保存され消えないが、
+  // FCMトークンはService Workerの更新などで裏側で入れ替わることがある。
+  // 「有効にした」という事実だけはこちらで localStorage に覚えておき、
+  // 起動時・設定画面を開いた時に許可が生きていれば黙ってトークンを再登録
+  // することで、アプリを更新しても通知が届き続けるようにする。
+  function pushTokenKey(role) {
+    return "shindanshi_push_token_" + role;
+  }
+
   function setPushMsg(text, isErr) {
     var el = document.getElementById("pushMsg");
     if (!el) return;
     el.textContent = text;
     el.className = "sync-msg" + (isErr ? " err" : "");
+  }
+
+  function refreshPushStatusMessage() {
+    if (!("Notification" in window)) return;
+    if (Notification.permission === "granted" && lsGet(pushTokenKey(activeUser), null)) {
+      setPushMsg(names[activeUser] + "さんの端末として通知は有効です。", false);
+    } else {
+      setPushMsg("", false);
+    }
+  }
+
+  function registerPushToken(showErrors) {
+    if (!cloudRoomId) {
+      if (showErrors) setPushMsg("先にクラウド同期でペアコードに接続してください。", true);
+      return Promise.resolve();
+    }
+    return withTimeout(navigator.serviceWorker.ready, CLOUD_TIMEOUT_MS, CLOUD_TIMEOUT_MSG).then(function (reg) {
+      return withTimeout(loadCloudSyncModule(), CLOUD_TIMEOUT_MS, CLOUD_TIMEOUT_MSG).then(function (mod) {
+        return withTimeout(mod.requestPushToken(reg), CLOUD_TIMEOUT_MS, CLOUD_TIMEOUT_MSG);
+      });
+    }).then(function (token) {
+      if (!token) throw new Error("no token");
+      lsSet(pushTokenKey(activeUser), { token: token, updatedAt: Date.now() });
+      var tokens = {};
+      tokens[activeUser] = { token: token, updatedAt: Date.now() };
+      return loadCloudSyncModule().then(function (mod) {
+        return mod.pushRoomData(cloudRoomId, { pushTokens: tokens });
+      });
+    }).then(function () {
+      setPushMsg(names[activeUser] + "さんの端末として通知を有効にしました。", false);
+    }).catch(function (err) {
+      if (showErrors) {
+        setPushMsg(err && err.message === CLOUD_TIMEOUT_MSG ? CLOUD_TIMEOUT_MSG : "通知の設定に失敗しました。通信環境を確認してもう一度お試しください。", true);
+      }
+      throw err;
+    });
+  }
+
+  // 許可済みなら通知許可ダイアログを出さずに黙ってトークンを最新化する。
+  // アプリ更新（Service Worker再登録）直後などに呼び、通知が無効化された
+  // ように見える状態を防ぐ。
+  function silentlyRefreshPushToken() {
+    if (!cloudRoomId) return;
+    if (!("Notification" in window) || Notification.permission !== "granted") return;
+    if (!("serviceWorker" in navigator) || !("PushManager" in window)) return;
+    if (!lsGet(pushTokenKey(activeUser), null)) return;
+    registerPushToken(false).catch(function () {});
   }
 
   function enablePushNotifications() {
@@ -389,22 +446,7 @@ function withTimeout(promise, ms, timeoutMessage) {
         setPushMsg("通知が許可されませんでした。ブラウザの設定から許可してください。", true);
         return;
       }
-      withTimeout(navigator.serviceWorker.ready, CLOUD_TIMEOUT_MS, CLOUD_TIMEOUT_MSG).then(function (reg) {
-        return withTimeout(loadCloudSyncModule(), CLOUD_TIMEOUT_MS, CLOUD_TIMEOUT_MSG).then(function (mod) {
-          return withTimeout(mod.requestPushToken(reg), CLOUD_TIMEOUT_MS, CLOUD_TIMEOUT_MSG);
-        });
-      }).then(function (token) {
-        if (!token) throw new Error("no token");
-        var tokens = {};
-        tokens[activeUser] = { token: token, updatedAt: Date.now() };
-        return loadCloudSyncModule().then(function (mod) {
-          return mod.pushRoomData(cloudRoomId, { pushTokens: tokens });
-        });
-      }).then(function () {
-        setPushMsg(names[activeUser] + "さんの端末として通知を有効にしました。", false);
-      }).catch(function (err) {
-        setPushMsg(err && err.message === CLOUD_TIMEOUT_MSG ? CLOUD_TIMEOUT_MSG : "通知の設定に失敗しました。通信環境を確認してもう一度お試しください。", true);
-      });
+      registerPushToken(true).catch(function () {});
     });
   }
 
@@ -1314,6 +1356,7 @@ function withTimeout(promise, ms, timeoutMessage) {
         document.getElementById("nameW").value = names.wife;
         document.getElementById("roomCodeInput").value = cloudRoomId || "";
         document.getElementById("examDateInput").value = examDate;
+        refreshPushStatusMessage();
       }
     });
 
