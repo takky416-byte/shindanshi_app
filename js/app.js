@@ -1488,6 +1488,16 @@ function withTimeout(promise, ms, timeoutMessage) {
 
     var savedRoomCode = lsGet("shindanshi_room_code", "");
     if (savedRoomCode) connectCloudRoom(savedRoomCode, true);
+
+    // スマホでアプリをバックグラウンドに回すと、Firestoreのリアルタイム
+    // 購読（WebSocket）がOS側で切られたまま復帰しないことがある
+    // （「接続するボタンを押せば同期される」という報告はこれが原因）。
+    // 画面に戻ってきたタイミングで購読を張り直し、最新データを取り直す。
+    document.addEventListener("visibilitychange", function () {
+      if (document.visibilityState === "visible" && cloudRoomId) {
+        connectCloudRoom(cloudRoomId, true);
+      }
+    });
   }
 
   if (document.readyState === "loading") {
