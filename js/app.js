@@ -427,7 +427,10 @@ function withTimeout(promise, ms, timeoutMessage) {
     if (!cloudRoomId) return;
     if (!("Notification" in window) || Notification.permission !== "granted") return;
     if (!("serviceWorker" in navigator) || !("PushManager" in window)) return;
-    if (!lsGet(pushTokenKey(activeUser), null)) return;
+    // 以前この端末で明示的に有効化したかどうかは問わない。通知許可さえ
+    // 生きていれば毎回トークンを取り直して登録し直す（自己修復）。
+    // ローカルの記録だけに頼ると、その記録が何らかの理由で失われた際に
+    // 復帰できなくなるため。
     registerPushToken(false).catch(function () {});
   }
 
