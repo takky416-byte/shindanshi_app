@@ -299,17 +299,29 @@ function withTimeout(promise, ms, timeoutMessage) {
   var CLOUD_TIMEOUT_MS = 10000;
   var CLOUD_TIMEOUT_MSG = "エラー：接続がタイムアウトしました。広告ブロッカーや会社・学校のネットワーク、VPN/プライベートDNSの設定などでgoogleapis.com / gstatic.comへの通信がブロックされていないか確認してください。";
 
+  // 自分（activeUser）の解答履歴だけを書き込む。相手側のフィールドは
+  // 絶対に含めない。
+  //
+  // 以前はhusband/wife両方をこの端末のローカルコピーからまとめて送って
+  // いたが、Firestoreの配列フィールドはmerge:trueでも要素単位ではなく
+  // フィールド全体が上書きされる。そのため、リアルタイム購読に取りこぼし
+  // や遅延があった直後にどちらかが解答すると、その端末が持っている
+  // 「相手側の少し古いローカルコピー」でクラウド上の相手の最新履歴を
+  // 上書きしてしまい、相手の端末からは「同期されない・消える」ように
+  // 見えていた（これが今回の同期不良の実体）。各端末は自分の役割の
+  // フィールドにだけ書き込む「単一の書き手」にすることで、この上書きを
+  // 構造的に起こらないようにする。
   function pushCloudProgress() {
     if (!cloudRoomId) return;
+    var payload = {
+      names: { husband: names.husband, wife: names.wife },
+      examDate: examDate,
+      examDateUpdatedAt: examDateUpdatedAt
+    };
+    payload[activeUser] = progress[activeUser];
     withTimeout(
       loadCloudSyncModule().then(function (mod) {
-        return mod.pushRoomData(cloudRoomId, {
-          names: { husband: names.husband, wife: names.wife },
-          husband: progress.husband,
-          wife: progress.wife,
-          examDate: examDate,
-          examDateUpdatedAt: examDateUpdatedAt
-        });
+        return mod.pushRoomData(cloudRoomId, payload);
       }),
       CLOUD_TIMEOUT_MS,
       CLOUD_TIMEOUT_MSG
