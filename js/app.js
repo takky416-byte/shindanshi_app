@@ -37,6 +37,15 @@ function withTimeout(promise, ms, timeoutMessage) {
 (function () {
   "use strict";
 
+  // 解答履歴（answered配列）1件あたりの想定サイズと、Firestoreの
+  // ドキュメントサイズ上限（1ドキュメント1MiB）を踏まえた上限件数。
+  // 全1646問を何周も解いても十分足りる余裕を持たせつつ、夫婦2人分を
+  // 1つのroomドキュメントに収めても上限に収まる範囲に抑えている。
+  // 以前は1000件だったが、本格的に演習を続けると現実に到達してしまい、
+  // 古い履歴が黙って失われる（累計問題数や弱点復習の対象からも消える）
+  // 不具合があったため引き上げた。
+  var MAX_ANSWERED_HISTORY = 3000;
+
   // ---------- 状態 ----------
   var activeUser = "husband"; // "husband" | "wife"
   var names = { husband: "夫", wife: "妻" };
@@ -193,7 +202,7 @@ function withTimeout(promise, ms, timeoutMessage) {
       if (!seen[key]) { seen[key] = true; out.push(item); }
     });
     out.sort(function (x, y) { return x.t - y.t; });
-    if (out.length > 1000) out = out.slice(-1000);
+    if (out.length > MAX_ANSWERED_HISTORY) out = out.slice(-MAX_ANSWERED_HISTORY);
     return out;
   }
 
@@ -264,7 +273,7 @@ function withTimeout(promise, ms, timeoutMessage) {
     }
     progress[userId] = p;
     p.answered.push({ q: questionId, s: subject, c: correct, t: Date.now() });
-    if (p.answered.length > 1000) p.answered = p.answered.slice(-1000);
+    if (p.answered.length > MAX_ANSWERED_HISTORY) p.answered = p.answered.slice(-MAX_ANSWERED_HISTORY);
     p.updatedAt = Date.now();
     lsSet("shindanshi_progress_" + userId, p);
     renderCompare();
