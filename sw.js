@@ -2,7 +2,7 @@
 // キャッシュ内容を更新した際は CACHE_NAME のバージョンを上げること
 // （合わせて js/version.js の APP_VERSION / APP_UPDATED も更新し、
 // 画面右上の表示からデプロイが反映されたかを確認できるようにする）。
-const CACHE_NAME = "shindanshi-shell-v24";
+const CACHE_NAME = "shindanshi-shell-v25";
 const PRECACHE_URLS = [
   "./",
   "./index.html",
@@ -17,6 +17,7 @@ const PRECACHE_URLS = [
   "./icons/icon-192.png",
   "./icons/icon-512.png",
   "./icons/icon-maskable-512.png",
+  "./icons/icon-badge-96.png",
   "./icons/apple-touch-icon.png"
 ];
 // Firebase SDK（gstatic.com）は cache.addAll の必須リストには含めない。
@@ -51,6 +52,13 @@ self.addEventListener("activate", (event) => {
 // プッシュ通知（Cloud Functions からのFCM webpush配信）。
 // title/body のみをJSONで送ってもらい、アイコンや遷移先はこの端末での
 // 実際のデプロイパス（self.registration.scope）から組み立てる。
+//
+// badge（Androidのステータスバーに出る小さいアイコン）には icon-192.png
+// をそのまま使わない。Androidはbadgeを「アルファチャンネルの形だけを
+// 白いシルエットとして描画」する仕様で、icon-192.png は透過なしの
+// 不透明な正方形PNGだったため、意図した図柄にならず「アイコンが
+// 設定されていない」ように見えていた。icon-badge-96.png は透明背景＋
+// 白シルエットで書き出した専用のbadge画像。
 self.addEventListener("push", (event) => {
   var payload = {};
   try {
@@ -66,7 +74,7 @@ self.addEventListener("push", (event) => {
     self.registration.showNotification(title, {
       body: body,
       icon: new URL("icons/icon-192.png", scope).toString(),
-      badge: new URL("icons/icon-192.png", scope).toString(),
+      badge: new URL("icons/icon-badge-96.png", scope).toString(),
       data: { url: scope }
     })
   );
